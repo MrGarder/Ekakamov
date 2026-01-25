@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Ekakamov | Отправить отчет</title>
+    <style>
+        :root {
+            --primary: #8b0000;
+            --accent: #ff0000;
+            --bg: #050505;
+            --input-bg: #121212;
+        }
+
+        body { 
+            background-color: var(--bg); 
+            color: #fff; 
+            font-family: 'Segoe UI', sans-serif; 
+            margin: 0;
+            background-image: radial-gradient(circle at center, #1a0000 0%, #050505 100%);
+            min-height: 100vh;
+        }
+
+        header { 
+            background: linear-gradient(180deg, var(--primary) 0%, rgba(0,0,0,0) 100%);
+            padding: 40px 20px; 
+            text-align: center; 
+            text-transform: uppercase;
+            letter-spacing: 5px;
+        }
+
+        nav { 
+            display: flex; 
+            justify-content: center; 
+            background: rgba(20, 20, 20, 0.8); 
+            padding: 15px; 
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #333;
+        }
+
+        nav a { 
+            color: #aaa; 
+            margin: 0 15px; 
+            text-decoration: none; 
+            font-weight: bold; 
+            text-transform: uppercase;
+            font-size: 12px;
+            transition: 0.3s;
+        }
+
+        nav a:hover { color: var(--accent); }
+
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .form-card {
+            background: rgba(15, 15, 15, 0.9);
+            padding: 40px;
+            border-radius: 15px;
+            border: 1px solid #222;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .form-card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+        }
+
+        .form-card h3 {
+            margin-top: 0;
+            color: var(--accent);
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 1.5em;
+        }
+
+        .info-alert {
+            background: rgba(255, 0, 0, 0.05);
+            border: 1px dashed var(--primary);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-size: 0.9em;
+            color: #ccc;
+            text-align: center;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.8em;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 15px;
+            background: var(--input-bg);
+            border: 1px solid #222;
+            color: #fff;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: 0.3s;
+            box-sizing: border-box;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: #1a1a1a;
+            box-shadow: 0 0 10px rgba(255,0,0,0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 18px;
+            background: var(--accent);
+            border: none;
+            color: #fff;
+            font-weight: bold;
+            font-size: 1em;
+            text-transform: uppercase;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 10px;
+            box-shadow: 0 5px 15px rgba(255,0,0,0.3);
+        }
+
+        button:hover {
+            background: #cc0000;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255,0,0,0.4);
+        }
+
+        button:disabled {
+            background: #444;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .footer-text {
+            text-align: center;
+            color: #444;
+            font-size: 0.8em;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+
+    <header><h1>EKAKAMOV REPORTS</h1></header>
+
+    <nav>
+        <a href="index.html">Главная</a>
+        <a href="members.html">Состав</a>
+        <a href="rules.html">Устав</a>
+        <a href="reports.html">Отчеты</a>
+        <a href="rankup.html">Повышение</a>
+        <a href="unwarn.html">Выговоры</a>
+    </nav>
+
+    <div class="container">
+        <div class="form-card">
+            <h3>Подать отчет</h3>
+            
+            <div class="info-alert">
+                При сдаче устава обязательно убедитесь о правильности отчета.
+            </div>
+
+            <form id="reportForm">
+                <div class="input-group">
+                    <label>Игровой Никнейм</label>
+                    <input type="text" id="nickname" placeholder="Напр: User_Ekakamov" required>
+                </div>
+
+                <div class="input-group">
+                    <label>Ваш текущий ранг</label>
+                    <input type="text" id="rank" placeholder="Напр: Кандидат [1]" required>
+                </div>
+
+                <div class="input-group">
+                    <label>Что было сделано?</label>
+                    <textarea id="work" rows="4" placeholder="Опишите проделанную работу..." required></textarea>
+                </div>
+
+                <div class="input-group">
+                    <label>Доказательства (ссылки)</label>
+                    <input type="text" id="proof" placeholder="Imgur, Postimages, YouTube" required>
+                </div>
+
+                <button type="submit" id="submitBtn">Отправить в Штаб</button>
+            </form>
+            
+            <div id="statusMessage" class="status"></div>
+        </div>
+        
+        <div class="footer-text">
+            Все отчеты проверяются Старшим Составом в течение 24 часов.
+        </div>
+    </div>
+
+    <script>
+        const token = "7922162882:AAFvx7yUn3sS-hkA6CwzSh1rcPFxPcSm71E";
+        const chatId = "2018168530";
+
+        document.getElementById('reportForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const btn = document.getElementById('submitBtn');
+            const status = document.getElementById('statusMessage');
+            
+            // Получаем текущее время
+            const now = new Date();
+            const timeString = now.toLocaleString('ru-RU');
+
+            const nickname = document.getElementById('nickname').value;
+            const rank = document.getElementById('rank').value;
+            const work = document.getElementById('work').value;
+            const proof = document.getElementById('proof').value;
+
+            // Красивая разметка для Telegram
+            const message = `🚨 *НОВЫЙ ОТЧЕТ С САЙТА* 🚨\n\n` +
+                            `👤 *Ник:* \`${nickname}\`\n` +
+                            `📈 *Ранг:* ${rank}\n` +
+                            `📝 *Работа:* ${work}\n` +
+                            `📅 *Дата отправки:* ${timeString}\n\n` +
+                            `🔗 *Доказательства:* \n${proof}`;
+
+            btn.disabled = true;
+            btn.innerText = "ПЕРЕДАЧА ДАННЫХ...";
+
+            fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: message,
+                    parse_mode: "Markdown"
+                })
+            })
+            .then(response => {
+                status.style.display = "block";
+                if(response.ok) {
+                    status.style.background = "rgba(0, 255, 0, 0.1)";
+                    status.style.color = "#00ff00";
+                    status.innerText = "✅ Отчет доставлен в Telegram!";
+                    document.getElementById('reportForm').reset();
+                } else {
+                    status.style.background = "rgba(255, 0, 0, 0.1)";
+                    status.style.color = "#ff0000";
+                    status.innerText = "❌ Ошибка (проверь токен бота)";
+                }
+            })
+            .catch(() => {
+                status.style.display = "block";
+                status.style.color = "#ff0000";
+                status.innerText = "❌ Ошибка сети";
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerText = "ОТПРАВИТЬ В ШТАБ";
+            });
+        });
+    </script>
+</body>
+</html>

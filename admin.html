@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Ekakamov | Admin Center</title>
+    <style>
+        :root {
+            --primary: #8b0000; --accent: #ff0000; --bg: #050505; --card-bg: #111;
+        }
+        body { background-color: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; text-align: center; }
+        header { 
+            background: linear-gradient(180deg, var(--primary) 0%, #000 100%);
+            padding: 30px 20px; border-bottom: 3px solid var(--accent); text-transform: uppercase; position: relative;
+        }
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+        .btn-home {
+            position: absolute; left: 20px; top: 50%; transform: translateY(-50%);
+            text-decoration: none; color: #ccc; border: 1px solid #444; padding: 8px 15px; border-radius: 5px; font-size: 12px; transition: 0.3s;
+        }
+        .btn-home:hover { border-color: var(--accent); color: #fff; background: #222; }
+        #login-screen { 
+            background: var(--card-bg); padding: 40px; border-radius: 10px; border: 1px solid var(--primary);
+            max-width: 400px; margin: 50px auto; box-shadow: 0 0 30px rgba(139, 0, 0, 0.4);
+        }
+        #admin-panel { display: none; }
+        input { background: #0a0a0a; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 5px; margin: 10px 0; width: 80%; }
+        button { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 5px; cursor: pointer; font-weight: bold; text-transform: uppercase; }
+        button:hover { background: var(--accent); box-shadow: 0 0 15px var(--accent); }
+        .admin-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; margin-top: 20px; }
+        .admin-table tr { background: var(--card-bg); }
+        .admin-table td { padding: 15px; border-top: 1px solid #222; border-bottom: 1px solid #222; }
+        .admin-table td:first-child { border-radius: 8px 0 0 8px; color: var(--accent); font-weight: bold; text-align: left; }
+        .admin-table td:last-child { border-radius: 0 8px 8px 0; text-align: right; }
+        #error-msg { color: #ff0000; font-weight: bold; margin-top: 15px; display: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="index.html" class="btn-home">← НА ГЛАВНУЮ</a>
+        <h1>EKAKAMOV ADMIN</h1>
+    </header>
+
+    <div class="container">
+        <div id="login-screen">
+            <h2 style="color: var(--accent)">ВХОД В ПАНЕЛЬ</h2>
+            <input type="password" id="passInput" placeholder="Введите пароль...">
+            <div id="error-msg">❌ НЕВЕРНЫЙ ПАРОЛЬ!</div>
+            <br>
+            <button onclick="tryLogin()">ВОЙТИ</button>
+        </div>
+
+        <div id="admin-panel">
+            <div style="background: #111; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <input type="text" id="newName" placeholder="Никнейм" style="width: 200px; margin-right: 10px;">
+                <input type="text" id="newRank" placeholder="Ранг" style="width: 150px; margin-right: 10px;">
+                <button onclick="addMember()">ДОБАВИТЬ</button>
+            </div>
+
+            <table class="admin-table">
+                <tbody id="member-list-admin"></tbody>
+            </table>
+
+            <div style="margin-top: 30px;">
+                <button onclick="location.reload()" style="background: #333;">ВЫХОД</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let adminPass = "";
+
+    async function tryLogin() {
+        const passField = document.getElementById('passInput');
+        const pass = passField.value.trim(); 
+        const errorMsg = document.getElementById('error-msg');
+
+        console.log("Попытка входа с паролем:", pass); // Для проверки в консоли F12
+
+        try {
+            const res = await fetch('/admin/update-member', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: pass, name: "CHECK_AUTH" }) 
+            });
+
+            if (res.ok) {
+                adminPass = pass;
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+                loadData();
+            } else {
+                errorMsg.style.display = 'block';
+                passField.value = "";
+            }
+        } catch (err) {
+            alert("Ошибка связи с сервером!");
+        }
+    }
+
+    async function loadData() {
+        const res = await fetch('/get-statuses');
+        const data = await res.json();
+        const list = document.getElementById('member-list-admin');
+        list.innerHTML = '';
+
+        for (let name in data) {
+            if(name === "CHECK_AUTH" || name === "TEST") continue;
+            const m = data[name];
+            const sId = name.replace(/\s+/g, '_'); 
+
+            list.innerHTML += `
+                <tr>
+                    <td>${name}</td>
+                    <td><input type="text" id="rank-${sId}" value="${m.rank || ''}" style="width:120px; margin:0;"></td>
+                    <td>ВЫГ: <input type="number" id="warns-${sId}" value="${m.warns || 0}" style="width:50px; margin:0;"></td>
+                    <td>
+                        <button onclick="saveMember('${name}')" style="background:green; padding: 5px 10px; font-size:12px;">OK</button>
+                        <button onclick="deleteMember('${name}')" style="background:#444; padding: 5px 10px; font-size:10px;">УВОЛИТЬ</button>
+                    </td>
+                </tr>`;
+        }
+    }
+
+    async function saveMember(name) {
+        const sId = name.replace(/\s+/g, '_');
+        const rank = document.getElementById(`rank-${sId}`).value;
+        const warns = document.getElementById(`warns-${sId}`).value;
+
+        await fetch('/admin/update-member', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: adminPass, name, rank, warns })
+        });
+        alert("Сохранено!");
+    }
+
+    async function addMember() {
+        const name = document.getElementById('newName').value.trim();
+        const rank = document.getElementById('newRank').value.trim();
+        if(!name) return;
+
+        await fetch('/admin/update-member', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: adminPass, name, rank, warns: 0 })
+        });
+        
+        document.getElementById('newName').value = "";
+        document.getElementById('newRank').value = "";
+        loadData();
+    }
+
+    async function deleteMember(name) {
+        if(!confirm("Удалить " + name + "?")) return;
+        await fetch('/admin/delete-member', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: adminPass, name })
+        });
+        loadData();
+    }
+</script>
+</body>
+</html>
