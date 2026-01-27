@@ -1,30 +1,31 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ТВОЯ ССЫЛКА (ОБЯЗАТЕЛЬНО ЗАМЕНИ 'ТВОЙ_ПАРОЛЬ' НА РЕАЛЬНЫЙ ПАРОЛЬ ОТ ПОЛЬЗОВАТЕЛЯ БАЗЫ)
-const mongoURI = "mongodb+srv://mrgarderreddragon_db_user:01050302@cluster0.yxx1kto.mongodb.net/familyDB?retryWrites=true&w=majority";
+// Твоя ссылка для подключения к MongoDB
+const mongoURI = "mongodb+srv://mrgarderreddragon_db_user:01050302@cluster0.yxx1kto.mongodb.net/familyDB?retryWrites=true&w=majority&appName=Cluster0";
 
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Подключение к MongoDB
+// Подключение к базе данных
 mongoose.connect(mongoURI)
-    .then(() => console.log("БАЗА ПОДКЛЮЧЕНА — ТЕПЕРЬ НИЧЕГО НЕ ПРОПАДЕТ!"))
-    .catch(err => console.log("ОШИБКА БАЗЫ:", err));
+    .then(() => console.log("БАЗА ПОДКЛЮЧЕНА — ВСЁ ГУД!"))
+    .catch(err => console.error("ОШИБКА ПОДКЛЮЧЕНИЯ К БАЗЕ:", err));
 
-// Схема данных участника
+// Описание того, как хранить участника в базе
 const memberSchema = new mongoose.Schema({
-    name: { type: String, unique: true },
-    rank: String,
-    warns: Number,
-    online: Boolean
+    name: { type: String, unique: true, required: true },
+    rank: { type: String, default: "[1] Кандидат" },
+    warns: { type: Number, default: 0 },
+    online: { type: Boolean, default: false }
 });
 
 const Member = mongoose.model('Member', memberSchema);
 
-// Получить всех участников
+// Маршрут для получения списка всех участников
 app.get('/get-statuses', async (req, res) => {
     try {
         const members = await Member.find();
@@ -33,27 +34,37 @@ app.get('/get-statuses', async (req, res) => {
             data[m.name] = { rank: m.rank, warns: m.warns, online: m.online };
         });
         res.json(data);
-    } catch (e) { res.status(500).send(e); }
+    } catch (e) {
+        res.status(500).json({ error: "Ошибка при получении данных" });
+    }
 });
 
-// Добавить или обновить участника
+// Маршрут для добавления/обновления участника через админку
 app.post('/admin/update-member', async (req, res) => {
     const { password, name, online, rank, warns } = req.body;
-    if (password !== "01050302") return res.status(403).send("Wrong password");
+    
+    // Проверка пароля админа
+    if (password !== "01050302") {
+        return res.status(403).send("Неверный пароль админа");
+    }
+
+    if (!name) return res.status(400).send("Ник игрока обязателен");
 
     try {
         await Member.findOneAndUpdate(
             { name: name },
             { 
-                rank: rank || "[1] Кандидат", 
-                online: online !== undefined ? online : false, 
-                warns: warns !== undefined ? warns : 0 
+                rank: rank, 
+                online: online, 
+                warns: warns 
             },
             { upsert: true, new: true }
         );
         res.send("OK");
-    } catch (e) { res.status(500).send(e); }
+    } catch (e) {
+        console.error("Ошибка сохранения:", e);
+        res.status(500).send("Ошибка базы данных");
+    }
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
+app.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT}`));
