@@ -4,7 +4,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ТВОЯ ССЫЛКА (ОБЯЗАТЕЛЬНО ЗАМЕНИ 'ТВОЙ_ПАРОЛЬ' НА РЕАЛЬНЫЙ ПАРОЛЬ ОТ ПОЛЬЗОВАТЕЛЯ БАЗЫ)
-const mongoURI = "mongodb+srv://mrgarderreddragon_db_user:ТВОЙ_ПАРОЛЬ@cluster0.yxx1kto.mongodb.net/familyDB?retryWrites=true&w=majority";
+const mongoURI = "mongodb+srv://mrgarderreddragon_db_user:01050302@cluster0.yxx1kto.mongodb.net/familyDB?retryWrites=true&w=majority";
 
 app.use(express.json());
 app.use(express.static(__dirname));
@@ -56,3 +56,4 @@ app.post('/admin/update-member', async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
