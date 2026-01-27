@@ -1,63 +1,58 @@
 const express = require('express');
-const fs = require('fs');
+const mongoose = require('mongoose');
 const app = express();
+const PORT = process.env.PORT || 3000;
+
+// ТВОЯ ССЫЛКА (ОБЯЗАТЕЛЬНО ЗАМЕНИ 'ТВОЙ_ПАРОЛЬ' НА РЕАЛЬНЫЙ ПАРОЛЬ ОТ ПОЛЬЗОВАТЕЛЯ БАЗЫ)
+const mongoURI = "mongodb+srv://mrgarderreddragon_db_user:ТВОЙ_ПАРОЛЬ@cluster0.yxx1kto.mongodb.net/familyDB?retryWrites=true&w=majority";
 
 app.use(express.json());
-app.use(express.static('.'));
+app.use(express.static(__dirname));
 
-// ВОТ ЗДЕСЬ МЫ МЕНЯЕМ ПАРОЛЬ НА ТВОЙ
-const MY_SECRET_PASS = "01050302"; 
+// Подключение к MongoDB
+mongoose.connect(mongoURI)
+    .then(() => console.log("БАЗА ПОДКЛЮЧЕНА — ТЕПЕРЬ НИЧЕГО НЕ ПРОПАДЕТ!"))
+    .catch(err => console.log("ОШИБКА БАЗЫ:", err));
 
-const DATA_FILE = './statuses.json';
+// Схема данных участника
+const memberSchema = new mongoose.Schema({
+    name: { type: String, unique: true },
+    rank: String,
+    warns: Number,
+    online: Boolean
+});
 
-function getFamilyData() {
+const Member = mongoose.model('Member', memberSchema);
+
+// Получить всех участников
+app.get('/get-statuses', async (req, res) => {
     try {
-        if (!fs.existsSync(DATA_FILE)) return {};
-        return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '{}');
-    } catch (e) { return {}; }
-}
-
-app.get('/get-statuses', (req, res) => res.json(getFamilyData()));
-
-app.post('/admin/update-member', (req, res) => {
-    const { password, name, rank, warns, online } = req.body;
-
-    // Проверка пароля (убираем пробелы и приводим к строке)
-    if (String(password).trim() !== MY_SECRET_PASS) {
-        console.log(`[ОТКАЗ] Кто-то ввел неверный пароль: ${password}`);
-        return res.status(403).json({ error: 'WRONG_PASS' });
-    }
-
-    if (name === "CHECK_AUTH") return res.json({ status: 'auth_ok' });
-
-    let data = getFamilyData();
-    data[name] = {
-        rank: rank || (data[name] ? data[name].rank : "Кандидат"),
-        warns: warns !== undefined ? parseInt(warns) : (data[name] ? data[name].warns : 0),
-        online: online !== undefined ? (online === true || online === "true") : (data[name] ? data[name].online : false)
-    };
-
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-    res.json({ status: 'ok' });
+        const members = await Member.find();
+        const data = {};
+        members.forEach(m => {
+            data[m.name] = { rank: m.rank, warns: m.warns, online: m.online };
+        });
+        res.json(data);
+    } catch (e) { res.status(500).send(e); }
 });
 
-app.post('/admin/delete-member', (req, res) => {
-    const { password, name } = req.body;
-    if (String(password).trim() !== MY_SECRET_PASS) return res.status(403).send('FAIL');
+// Добавить или обновить участника
+app.post('/admin/update-member', async (req, res) => {
+    const { password, name, online, rank, warns } = req.body;
+    if (password !== "01050302") return res.status(403).send("Wrong password");
 
-    let data = getFamilyData();
-    delete data[name];
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-    res.json({ status: 'deleted' });
+    try {
+        await Member.findOneAndUpdate(
+            { name: name },
+            { 
+                rank: rank || "[1] Кандидат", 
+                online: online !== undefined ? online : false, 
+                warns: warns !== undefined ? warns : 0 
+            },
+            { upsert: true, new: true }
+        );
+        res.send("OK");
+    } catch (e) { res.status(500).send(e); }
 });
 
-app.listen(3000, () => {
-    console.log(`\n=========================================`);
-    console.log(`СЕРВЕР ОБНОВЛЕН!`);
-    console.log(`НОВЫЙ ПАРОЛЬ: ${MY_SECRET_PASS}`); // Должно писать 01050302
-    console.log(`=========================================\n`);
-});
-
-
-
-
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
