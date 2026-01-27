@@ -2,22 +2,32 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Панель управления | Ekakamov</title>
     <style>
-        body { background: #050505; color: #fff; font-family: sans-serif; display: flex; justify-content: center; padding: 50px; }
-        .card { background: #111; padding: 30px; border-radius: 10px; border: 1px solid #8b0000; width: 400px; }
-        h2 { color: #ff0000; text-align: center; text-transform: uppercase; }
-        input, select, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; }
-        button { background: #8b0000; font-weight: bold; cursor: pointer; border: none; }
-        button:hover { background: #ff0000; }
-        .msg { text-align: center; font-size: 14px; margin-top: 10px; }
+        body { background: #050505; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: #111; padding: 30px; border-radius: 12px; border: 1px solid #8b0000; width: 100%; max-width: 400px; box-shadow: 0 0 20px rgba(139, 0, 0, 0.2); }
+        h2 { color: #ff0000; text-align: center; text-transform: uppercase; margin-bottom: 25px; letter-spacing: 2px; }
+        label { display: block; margin-bottom: 5px; font-size: 12px; color: #aaa; text-transform: uppercase; }
+        input, select, button { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; outline: none; transition: 0.3s; }
+        input:focus, select:focus { border-color: #ff0000; }
+        button { background: #8b0000; font-weight: bold; cursor: pointer; border: none; text-transform: uppercase; margin-top: 10px; }
+        button:hover { background: #ff0000; transform: translateY(-2px); }
+        .btn-secondary { background: #333; margin-top: 5px; font-size: 13px; }
+        .btn-secondary:hover { background: #444; }
+        .msg { text-align: center; font-size: 14px; min-height: 20px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>Управление семьей</h2>
+        
+        <label>Доступ</label>
         <input type="password" id="pass" placeholder="Пароль админа">
+        
+        <label>Данные игрока</label>
         <input type="text" id="name" placeholder="Ник игрока">
+        
         <select id="rank">
             <option value="[10] Глава">Глава [10]</option>
             <option value="[9] Зам. Главы">Зам. Главы [9]</option>
@@ -30,17 +40,26 @@
             <option value="[2] Равк">Равк [2]</option>
             <option value="[1] Кандидат">Кандидат [1]</option>
         </select>
+
         <input type="number" id="warns" placeholder="Выговоры (0-3)" min="0" max="3">
+        
         <select id="online">
             <option value="false">Оффлайн</option>
             <option value="true">В игре</option>
         </select>
-        <button onclick="saveMember()">Сохранить участника</button>
+
+        <button onclick="saveMember()">Сохранить изменения</button>
+        <button class="btn-secondary" onclick="window.location.href='index.html'">← На главную</button>
+        
         <div id="status" class="msg"></div>
     </div>
 
     <script>
         async function saveMember() {
+            const status = document.getElementById('status');
+            status.innerText = "Отправка...";
+            status.style.color = "#aaa";
+
             const data = {
                 password: document.getElementById('pass').value,
                 name: document.getElementById('name').value,
@@ -49,18 +68,25 @@
                 online: document.getElementById('online').value === "true"
             };
 
-            const res = await fetch('/admin/update-member', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
+            try {
+                const res = await fetch('/admin/update-member', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
 
-            const status = document.getElementById('status');
-            if (res.ok) {
-                status.innerText = "Успешно сохранено!";
-                status.style.color = "lime";
-            } else {
-                status.innerText = "Ошибка! Проверь пароль.";
+                if (res.ok) {
+                    status.innerText = "✅ Успешно сохранено!";
+                    status.style.color = "lime";
+                } else if (res.status === 403) {
+                    status.innerText = "❌ Неверный пароль!";
+                    status.style.color = "red";
+                } else {
+                    status.innerText = "❌ Ошибка сервера!";
+                    status.style.color = "red";
+                }
+            } catch (e) {
+                status.innerText = "❌ Нет связи с сервером!";
                 status.style.color = "red";
             }
         }
