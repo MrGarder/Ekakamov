@@ -4,7 +4,6 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Твоя ссылка с рабочим паролем
 const mongoURI = "mongodb+srv://mrgarderreddragon_db_user:RedDragon2026@cluster0.yxx1kto.mongodb.net/familyDB?retryWrites=true&w=majority&appName=Cluster0";
 
 app.use(express.json());
@@ -21,17 +20,15 @@ const Member = mongoose.model('Member', new mongoose.Schema({
     online: Boolean
 }));
 
-// Получение списка (для главной)
-app.get('/get-statuses', async (req, res) => {
+// Получить всех участников
+app.get('/admin/get-members', async (req, res) => {
     try {
         const members = await Member.find();
-        const data = {};
-        members.forEach(m => { data[m.name] = { rank: m.rank, warns: m.warns, online: m.online }; });
-        res.json(data);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+        res.json(members);
+    } catch (e) { res.status(500).send(e.message); }
 });
 
-// СОХРАНЕНИЕ / ИЗМЕНЕНИЕ
+// Добавить или обновить
 app.post('/admin/update-member', async (req, res) => {
     const { password, name, online, rank, warns } = req.body;
     if (password !== "01050302") return res.status(403).send("Wrong password");
@@ -45,13 +42,22 @@ app.post('/admin/update-member', async (req, res) => {
     } catch (e) { res.status(500).send(e.message); }
 });
 
-// УДАЛЕНИЕ (УВОЛЬНЕНИЕ) — ВОТ ЭТОТ КУСОК НУЖЕН!
+// Удалить
 app.post('/admin/delete-member', async (req, res) => {
     const { password, name } = req.body;
     if (password !== "01050302") return res.status(403).send("Wrong password");
     try {
         await Member.findOneAndDelete({ name: name.trim() });
         res.send("DELETED");
+    } catch (e) { res.status(500).send(e.message); }
+});
+
+app.get('/get-statuses', async (req, res) => {
+    try {
+        const members = await Member.find();
+        const data = {};
+        members.forEach(m => { data[m.name] = { rank: m.rank, warns: m.warns, online: m.online }; });
+        res.json(data);
     } catch (e) { res.status(500).send(e.message); }
 });
 
