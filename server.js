@@ -16,11 +16,28 @@ mongoose.connect(mongoURI)
 const Member = mongoose.model('Member', new mongoose.Schema({
     name: { type: String, unique: true },
     rank: String,
-    warns: Number,
+    warns: { type: Number, default: 0 },
     online: Boolean
 }));
 
-// Получить всех участников
+// Быстрое изменение выговоров (+/-)
+app.post('/admin/update-warns', async (req, res) => {
+    const { password, name, delta } = req.body;
+    if (password !== "01050302") return res.status(403).send("Wrong password");
+    try {
+        const member = await Member.findOne({ name: name });
+        if (!member) return res.status(404).send("Not found");
+        
+        let newWarns = (member.warns || 0) + delta;
+        if (newWarns < 0) newWarns = 0;
+        if (newWarns > 3) newWarns = 3;
+
+        member.warns = newWarns;
+        await member.save();
+        res.json({ newWarns });
+    } catch (e) { res.status(500).send(e.message); }
+});
+
 app.get('/admin/get-members', async (req, res) => {
     try {
         const members = await Member.find();
@@ -28,21 +45,15 @@ app.get('/admin/get-members', async (req, res) => {
     } catch (e) { res.status(500).send(e.message); }
 });
 
-// Добавить или обновить
 app.post('/admin/update-member', async (req, res) => {
     const { password, name, online, rank, warns } = req.body;
     if (password !== "01050302") return res.status(403).send("Wrong password");
     try {
-        await Member.findOneAndUpdate(
-            { name: name.trim() },
-            { rank, online, warns },
-            { upsert: true }
-        );
+        await Member.findOneAndUpdate({ name: name.trim() }, { rank, online, warns }, { upsert: true });
         res.send("OK");
     } catch (e) { res.status(500).send(e.message); }
 });
 
-// Удалить
 app.post('/admin/delete-member', async (req, res) => {
     const { password, name } = req.body;
     if (password !== "01050302") return res.status(403).send("Wrong password");
