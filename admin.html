@@ -2,101 +2,145 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Управление составом | Ekakamov</title>
+    <title>Управление семьей | Ekakamov</title>
     <style>
-        body { background: #050505; color: #fff; font-family: sans-serif; display: flex; justify-content: center; padding: 20px; }
-        .card { background: #111; padding: 25px; border-radius: 12px; border: 1px solid #8b0000; width: 400px; box-shadow: 0 0 15px rgba(139,0,0,0.3); }
-        h2 { color: #ff0000; text-align: center; text-transform: uppercase; margin-bottom: 20px; }
-        input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; }
-        .btn-save { background: #8b0000; font-weight: bold; cursor: pointer; border: none; }
-        .btn-delete { background: #444; color: #ff4444; cursor: pointer; border: 1px solid #ff4444; margin-top: 20px; font-size: 12px; }
-        .btn-save:hover { background: #ff0000; }
-        .btn-delete:hover { background: #ff4444; color: #000; }
-        .msg { text-align: center; font-weight: bold; margin-top: 10px; }
-        hr { border: 0; border-top: 1px solid #333; margin: 20px 0; }
+        body { background: #050505; color: #fff; font-family: sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .form-card { background: #111; padding: 20px; border-radius: 10px; border: 1px solid #8b0000; margin-bottom: 30px; }
+        h2 { color: #ff0000; text-transform: uppercase; text-align: center; }
+        input, select, button { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid #333; background: #000; color: #fff; }
+        .btn-add { background: #8b0000; cursor: pointer; border: none; font-weight: bold; width: 100%; margin-top: 10px; }
+        
+        table { width: 100%; border-collapse: collapse; background: #111; border-radius: 10px; overflow: hidden; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #222; }
+        th { background: #8b0000; color: #fff; }
+        
+        .btn-edit { background: #2196F3; border: none; cursor: pointer; padding: 5px 10px; }
+        .btn-del { background: #f44336; border: none; cursor: pointer; padding: 5px 10px; }
+        .status-online { color: lime; }
+        .status-offline { color: red; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>Админ-панель</h2>
-        
-        <input type="password" id="pass" placeholder="Пароль админа">
-        <hr>
-        
-        <label>Ник игрока (точно как в игре):</label>
-        <input type="text" id="name" placeholder="Пример: Ivan_Ivanov">
-        
-        <label>Ранг:</label>
-        <select id="rank">
-            <option value="[10] Глава">Глава [10]</option>
-            <option value="[9] Зам. Главы">Зам. Главы [9]</option>
-            <option value="[8] Гольд">Гольд [8]</option>
-            <option value="[7] Шерх">Шерх [7]</option>
-            <option value="[6] Элит">Элит [6]</option>
-            <option value="[5] Ветеран">Ветеран [5]</option>
-            <option value="[4] Боец">Боец [4]</option>
-            <option value="[3] Новичок+">Новичок+ [3]</option>
-            <option value="[2] Равк">Равк [2]</option>
-            <option value="[1] Кандидат">Кандидат [1]</option>
-        </select>
+    <div class="container">
+        <div class="form-card">
+            <h2>Добавить / Изменить участника</h2>
+            <div style="display: flex; flex-wrap: wrap; justify-content: center;">
+                <input type="password" id="pass" placeholder="Пароль админа" style="width: 95%;">
+                <input type="text" id="name" placeholder="Ник игрока">
+                <select id="rank">
+                    <option value="[10] Глава">Глава [10]</option>
+                    <option value="[9] Зам. Главы">Зам. Главы [9]</option>
+                    <option value="[8] Гольд">Гольд [8]</option>
+                    <option value="[7] Шерх">Шерх [7]</option>
+                    <option value="[6] Элит">Элит [6]</option>
+                    <option value="[5] Ветеран">Ветеран [5]</option>
+                    <option value="[4] Боец">Боец [4]</option>
+                    <option value="[3] Новичок+">Новичок+ [3]</option>
+                    <option value="[2] Равк">Равк [2]</option>
+                    <option value="[1] Кандидат">Кандидат [1]</option>
+                </select>
+                <input type="number" id="warns" placeholder="Выговоры" value="0" style="width: 80px;">
+                <select id="online">
+                    <option value="false">Оффлайн</option>
+                    <option value="true">В игре</option>
+                </select>
+                <button class="btn-add" onclick="saveMember()">СОХРАНИТЬ В БАЗУ</button>
+            </div>
+            <div id="msg" style="text-align:center; margin-top:10px;"></div>
+        </div>
 
-        <label>Выговоры:</label>
-        <input type="number" id="warns" value="0" min="0" max="3">
-        
-        <label>Статус:</label>
-        <select id="online">
-            <option value="false">Оффлайн</option>
-            <option value="true">В игре</option>
-        </select>
-
-        <button class="btn-save" onclick="manageMember('update')">Сохранить / Изменить</button>
-        <button class="btn-delete" onclick="manageMember('delete')">Уволить из семьи</button>
-        
-        <button style="background:#222; font-size: 12px;" onclick="window.location.href='index.html'">← Вернуться в меню</button>
-        
-        <div id="status" class="msg"></div>
+        <h2>Текущий состав</h2>
+        <table id="memberTable">
+            <thead>
+                <tr>
+                    <th>Ник</th>
+                    <th>Ранг</th>
+                    <th>Выговоры</th>
+                    <th>Статус</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+        </table>
     </div>
 
     <script>
-        async function manageMember(action) {
-            const status = document.getElementById('status');
-            const password = document.getElementById('pass').value;
-            const name = document.getElementById('name').value;
+        // Загрузка списка при входе
+        async function loadMembers() {
+            const res = await fetch('/admin/get-members');
+            const members = await res.json();
+            const tbody = document.querySelector('#memberTable tbody');
+            tbody.innerHTML = '';
 
-            if (!name || !password) {
-                status.innerText = "Введите ник и пароль!";
-                status.style.color = "yellow";
-                return;
-            }
+            members.forEach(m => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><b>${m.name}</b></td>
+                        <td>${m.rank}</td>
+                        <td>${m.warns}/3</td>
+                        <td class="${m.online ? 'status-online' : 'status-offline'}">${m.online ? 'В игре' : 'Оффлайн'}</td>
+                        <td>
+                            <button class="btn-edit" onclick="fillForm('${m.name}', '${m.rank}', ${m.warns}, ${m.online})">📝</button>
+                            <button class="btn-del" onclick="deleteMember('${m.name}')">❌</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
 
-            const url = action === 'update' ? '/admin/update-member' : '/admin/delete-member';
+        function fillForm(name, rank, warns, online) {
+            document.getElementById('name').value = name;
+            document.getElementById('rank').value = rank;
+            document.getElementById('warns').value = warns;
+            document.getElementById('online').value = online.toString();
+            window.scrollTo(0,0);
+        }
+
+        async function saveMember() {
             const data = {
-                password,
-                name,
+                password: document.getElementById('pass').value,
+                name: document.getElementById('name').value,
                 rank: document.getElementById('rank').value,
                 warns: parseInt(document.getElementById('warns').value),
                 online: document.getElementById('online').value === "true"
             };
 
-            try {
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
-                });
+            const res = await fetch('/admin/update-member', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
 
-                if (res.ok) {
-                    status.innerText = action === 'update' ? "✅ Данные обновлены!" : "🗑️ Игрок удален!";
-                    status.style.color = "lime";
-                    if (action === 'delete') document.getElementById('name').value = "";
-                } else {
-                    status.innerText = "❌ Ошибка! Проверь пароль.";
-                    status.style.color = "red";
-                }
-            } catch (e) {
-                status.innerText = "❌ Ошибка соединения";
+            if(res.ok) {
+                alert("Успешно!");
+                loadMembers();
+            } else {
+                alert("Ошибка! Проверь пароль.");
             }
         }
+
+        async function deleteMember(name) {
+            const password = document.getElementById('pass').value;
+            if(!password) return alert("Введите пароль админа сверху!");
+            
+            if(!confirm(`Уволить ${name}?`)) return;
+
+            const res = await fetch('/admin/delete-member', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({password, name})
+            });
+
+            if(res.ok) {
+                loadMembers();
+            } else {
+                alert("Ошибка удаления!");
+            }
+        }
+
+        loadMembers();
     </script>
 </body>
 </html>
