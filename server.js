@@ -6,24 +6,18 @@ const app = express();
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// МАКСИМАЛЬНО ЖИВУЧАЯ СТРОКА (БЕЗ SRV)
-// Мы подключаемся напрямую к узлам кластера, обходя блокировки DNS
-const mongoURI = "mongodb://mrgarderreddragon_db_user:RedDragon2028@cluster0-shard-00-00.yxx1kto.mongodb.net:27017,cluster0-shard-00-01.yxx1kto.mongodb.net:27017,cluster0-shard-00-02.yxx1kto.mongodb.net:27017/familyDB?ssl=true&replicaSet=atlas-yxx1kto-shard-0&authSource=admin&retryWrites=true&w=majority";
+// Приоритет: 1. Переменная в Render, 2. Прямая ссылка (если в Render пусто)
+const mongoURI = process.env.MONGO_URL || "mongodb+srv://dragon777:Dragon2026Strong@cluster0.yxx1kto.mongodb.net/familyDB?retryWrites=true&w=majority";
 
 console.log("⏳ Пытаюсь подключиться к MongoDB...");
 
-mongoose.connect(mongoURI, {
-    serverSelectionTimeoutMS: 10000, // Ждем максимум 10 секунд
-    family: 4 // Принудительно используем IPv4 (часто помогает при кривых настройках провайдера)
-})
+mongoose.connect(mongoURI)
 .then(() => {
     console.log("✅✅✅ БАЗА ПОДКЛЮЧЕНА! СВЯЗЬ УСТАНОВЛЕНА!");
 })
 .catch(err => {
-    console.log("❌ ОШИБКА ПОДКЛЮЧЕНИЯ К БАЗЕ:");
+    console.log("❌ ОШИБКА ПОДКЛЮЧЕНИЯ:");
     console.error(err.message);
-    console.log("-----------------------------------------");
-    console.log("СОВЕТ: Если видишь 'timeout', раздай интернет с ТЕЛЕФОНА и перезапусти сервер.");
 });
 
 const Member = mongoose.model('Member', new mongoose.Schema({
@@ -37,7 +31,6 @@ const Member = mongoose.model('Member', new mongoose.Schema({
 app.post('/admin/update-member', async (req, res) => {
     const { password, name, online, rank, warns } = req.body;
     
-    // Твой пароль админки
     if (password !== "01050302") {
         return res.status(403).send("Ошибка: Неверный пароль админа!");
     }
@@ -49,15 +42,14 @@ app.post('/admin/update-member', async (req, res) => {
             { rank, online: online === "true" || online === true, warns: parseInt(warns) || 0 }, 
             { upsert: true, new: true }
         );
-        console.log(`✅ Игрок ${updated.name} обновлен в базе`);
+        console.log(`✅ Игрок ${updated.name} обновлен`);
         res.send("OK");
     } catch (e) {
-        console.error("❌ Ошибка при записи в БД:", e.message);
-        res.status(500).send("Ошибка базы данных: " + e.message);
+        console.error("❌ Ошибка записи:", e.message);
+        res.status(500).send("Ошибка базы данных");
     }
 });
 
-// ПОЛУЧЕНИЕ ВСЕХ ЧЛЕНОВ (ДЛЯ АДМИНКИ)
 app.get('/admin/get-members', async (req, res) => {
     try {
         const members = await Member.find().sort({ name: 1 });
@@ -67,7 +59,6 @@ app.get('/admin/get-members', async (req, res) => {
     }
 });
 
-// ПОЛУЧЕНИЕ ДЛЯ ОСНОВНОЙ СТРАНИЦЫ
 app.get('/get-statuses', async (req, res) => {
     try {
         const members = await Member.find();
@@ -81,8 +72,9 @@ app.get('/get-statuses', async (req, res) => {
     }
 });
 
-const PORT = 3000;
+// ИСПРАВЛЕННЫЙ ПОРТ ДЛЯ RENDER
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`🚀 Сервер взлетел на порту ${PORT}`);
-    console.log(`🔗 Админка: http://localhost:${PORT}/admin.html`);
+    console.log(`🚀 Сервер запущен на порту ${PORT}`);
+    console.log(`✅ Система готова!`);
 });
