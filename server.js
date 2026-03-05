@@ -6,19 +6,11 @@ const app = express();
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Приоритет: 1. Переменная в Render, 2. Прямая ссылка (если в Render пусто)
 const mongoURI = process.env.MONGO_URL || "mongodb+srv://dragon777:Dragon2026Strong@cluster0.yxx1kto.mongodb.net/familyDB?retryWrites=true&w=majority";
 
-console.log("⏳ Пытаюсь подключиться к MongoDB...");
-
-mongoose.connect(mongoURI)
-.then(() => {
-    console.log("✅✅✅ БАЗА ПОДКЛЮЧЕНА! СВЯЗЬ УСТАНОВЛЕНА!");
-})
-.catch(err => {
-    console.log("❌ ОШИБКА ПОДКЛЮЧЕНИЯ:");
-    console.error(err.message);
-});
+mongoose.connect(mongoURI).then(() => {
+    console.log("✅ БАЗА ПОДКЛЮЧЕНА!");
+}).catch(err => console.log("❌ ОШИБКА:", err.message));
 
 const Member = mongoose.model('Member', new mongoose.Schema({
     name: { type: String, unique: true },
@@ -27,54 +19,60 @@ const Member = mongoose.model('Member', new mongoose.Schema({
     online: Boolean
 }));
 
-// ОБРАБОТКА СОХРАНЕНИЯ
+// 1. СОХРАНЕНИЕ / ИЗМЕНЕНИЕ (Уже было)
 app.post('/admin/update-member', async (req, res) => {
     const { password, name, online, rank, warns } = req.body;
-    
-    if (password !== "01050302") {
-        return res.status(403).send("Ошибка: Неверный пароль админа!");
-    }
-    if (!name) return res.status(400).send("Ошибка: Введите ник игрока!");
+    if (password !== "01050302") return res.status(403).send("Неверный пароль!");
+    if (!name) return res.status(400).send("Введите ник!");
 
     try {
-        const updated = await Member.findOneAndUpdate(
+        await Member.findOneAndUpdate(
             { name: name.trim() }, 
-            { rank, online: online === "true" || online === true, warns: parseInt(warns) || 0 }, 
-            { upsert: true, new: true }
+            { rank, online, warns: parseInt(warns) || 0 }, 
+            { upsert: true }
         );
-        console.log(`✅ Игрок ${updated.name} обновлен`);
         res.send("OK");
-    } catch (e) {
-        console.error("❌ Ошибка записи:", e.message);
-        res.status(500).send("Ошибка базы данных");
-    }
+    } catch (e) { res.status(500).send(e.message); }
 });
 
-app.get('/admin/get-members', async (req, res) => {
+// 2. ИЗМЕНЕНИЕ ВЫГОВОРОВ (Добавил!)
+app.post('/admin/update-warns', async (req, res) => {
+    const { password, name, delta } = req.body;
+    if (password !== "01050302") return res.status(403).send("Пароль!");
+    
     try {
-        const members = await Member.find().sort({ name: 1 });
-        res.json(members);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
+        const m = await Member.findOne({ name });
+        if (m) {
+            m.warns = Math.max(0, (m.warns || 0) + delta);
+            await m.save();
+            res.send("OK");
+        } else { res.status(404).send("Не найден"); }
+    } catch (e) { res.status(500).send(e.message); }
+});
+
+// 3. УДАЛЕНИЕ (Добавил!)
+app.post('/admin/delete-member', async (req, res) => {
+    const { password, name } = req.body;
+    if (password !== "01050302") return res.status(403).send("Пароль!");
+
+    try {
+        await Member.deleteOne({ name });
+        res.send("OK");
+    } catch (e) { res.status(500).send(e.message); }
+});
+
+// 4. СПИСКИ (Уже было)
+app.get('/admin/get-members', async (req, res) => {
+    const members = await Member.find().sort({ name: 1 });
+    res.json(members);
 });
 
 app.get('/get-statuses', async (req, res) => {
-    try {
-        const members = await Member.find();
-        const data = {};
-        members.forEach(m => { 
-            data[m.name] = { rank: m.rank, warns: m.warns, online: m.online }; 
-        });
-        res.json(data);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
+    const members = await Member.find();
+    const data = {};
+    members.forEach(m => { data[m.name] = { rank: m.rank, warns: m.warns, online: m.online }; });
+    res.json(data);
 });
 
-// ИСПРАВЛЕННЫЙ ПОРТ ДЛЯ RENDER
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`🚀 Сервер запущен на порту ${PORT}`);
-    console.log(`✅ Система готова!`);
-});
+app.listen(PORT, () => console.log(`🚀 Порт ${PORT}`));
