@@ -180,25 +180,18 @@
 </div>
 
 <div class="glass-card" id="admin-panel">
-    <h3>УПРАВЛЕНИЕ УЧАСТНИКАМИ</h3>
+    <h3 style="font-size: 16px; margin-bottom: 10px;">УПРАВЛЕНИЕ</h3>
     
-    <div style="display: flex; flex-direction: column; gap: 5px;">
-        <input type="password" id="pass" placeholder="Пароль админа" style="padding:5px;">
-        <div style="display:flex; gap:5px;">
-            <input type="text" id="name" placeholder="Ник" style="flex:1; padding:5px;">
-            <input type="number" id="warns" placeholder="Выг." style="width:50px; padding:5px;">
-        </div>
-        <button class="btn-add" onclick="saveMember()" style="padding:5px;">СОХРАНИТЬ</button>
-    </div>
+    <form onsubmit="event.preventDefault(); saveMember();">
+        <input type="password" id="pass" placeholder="Пароль админа">
+        <input type="text" id="name" placeholder="Ник">
+        <input type="number" id="warns" placeholder="Выг." style="width: 60px;">
+        <button type="submit" class="btn-add">СОХРАНИТЬ</button>
+    </form>
 
-    <div class="table-wrapper">
-        <table class="member-table" id="memberTable">
-            <thead>
-                <tr><th>Ник</th><th>Ранг</th><th>Действия</th></tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
+    <div id="member-list-container">
+        </div>
+</div>
 </div>
 <script>
 // ===== СТАТИСТИКА =====
@@ -211,7 +204,9 @@ const chartOpts = {
 
 let activityData = JSON.parse(localStorage.getItem('activityData') || "[0,0,0,0,0,0,0]");
 
-let activityChart = new Chart(document.getElementById('activityChart'), {
+// Инициализация графика (проверка на наличие canvas)
+const ctx = document.getElementById('activityChart');
+let activityChart = ctx ? new Chart(ctx, {
     type: 'line',
     data: {
         labels: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
@@ -223,7 +218,7 @@ let activityChart = new Chart(document.getElementById('activityChart'), {
         }]
     },
     options: chartOpts
-});
+}) : null;
 
 // ===== XP И РАНГИ =====
 let xp = parseInt(localStorage.getItem('xp') || "0");
@@ -231,15 +226,20 @@ let level = parseInt(localStorage.getItem('level') || "1");
 
 function updateXP() {
     let next = level * 100;
-    document.getElementById('xp').innerText = xp;
-    document.getElementById('level').innerText = level;
-    document.getElementById('xpNext').innerText = next;
-    document.getElementById('xpBar').style.width = (xp / next) * 100 + "%";
+    const xpEl = document.getElementById('xp');
+    const lvlEl = document.getElementById('level');
+    const nextEl = document.getElementById('xpNext');
+    const barEl = document.getElementById('xpBar');
+    
+    if(xpEl) xpEl.innerText = xp;
+    if(lvlEl) lvlEl.innerText = level;
+    if(nextEl) nextEl.innerText = next;
+    if(barEl) barEl.style.width = (xp / next) * 100 + "%";
 }
 
 updateXP();
 
-// ===== СИСТЕМА ЗАДАЧ С ОДОБРЕНИЕМ =====
+// ===== СИСТЕМА ЗАДАЧ =====
 const tasksByLevel = {
     1: ["Сдать устав", "Взнос 10к"],
     2: ["Пригласить 2 чел", "Взнос 20к"],
@@ -264,12 +264,11 @@ function renderTasks() {
     let currentTasks = tasksByLevel[level] || [];
     currentTasks.forEach((task, index) => {
         let status = taskStatus[level] ? taskStatus[level][index] : null;
-
         const div = document.createElement('div');
         div.className = "task-item";
         
         let content = `<span>${task}</span>`;
-        if (status === "pending") content += " <small style='color:orange'>(Ожидание одобрения)</small>";
+        if (status === "pending") content += " <small style='color:orange'>(Ожидание)</small>";
         else if (status === "done") content += " <b style='color:green'>[ОДОБРЕНО]</b>";
         else content += ` <button onclick="requestApproval(${index})">Сдать</button>`;
 
@@ -285,20 +284,20 @@ function requestApproval(index) {
     renderTasks();
 }
 
-// ВЫЗЫВАЙ ЭТУ ФУНКЦИЮ ДЛЯ ОДОБРЕНИЯ (например: approveTask(1, 0))
 function approveTask(lvl, idx) {
     if (!taskStatus[lvl]) return;
     taskStatus[lvl][idx] = "done";
     
-    // Статистика: теперь слева направо (Пн=0, Вс=6)
     let dayIndex = new Date().getDay();
     dayIndex = (dayIndex === 0 ? 6 : dayIndex - 1);
     activityData[dayIndex] += 1;
     localStorage.setItem('activityData', JSON.stringify(activityData));
-    activityChart.data.datasets[0].data = activityData;
-    activityChart.update();
+    
+    if(activityChart) {
+        activityChart.data.datasets[0].data = activityData;
+        activityChart.update();
+    }
 
-    // Проверка на повышение
     let total = tasksByLevel[lvl].length;
     let doneCount = 0;
     for(let i=0; i < total; i++) { if(taskStatus[lvl][i] === "done") doneCount++; }
@@ -314,7 +313,45 @@ function approveTask(lvl, idx) {
     updateXP();
 }
 
-// ===== ДОСТИЖЕНИЯ И НАГРАДЫ =====
+// ===== АДМИНКА И СОХРАНЕНИЕ =====
+async function saveMember() {
+    // Получаем элементы формы с проверкой, чтобы не было ошибок, если их нет
+    const passEl = document.getElementById('pass');
+    const nameEl = document.getElementById('name');
+    const rankEl = document.getElementById('rank');
+    const warnsEl = document.getElementById('warns');
+    const onlineEl = document.getElementById('online');
+
+    if(!passEl || !nameEl || !rankEl) return alert("Ошибка: форма не найдена!");
+
+    const data = {
+        password: passEl.value,
+        name: nameEl.value,
+        rank: rankEl.value,
+        warns: parseInt(warnsEl ? warnsEl.value : 0),
+        online: onlineEl ? (onlineEl.value === "true") : false
+    };
+
+    // ЗАМЕНИ 'https://ТВОЙ-СЕРВЕР.com' на реальный URL
+    try {
+        const res = await fetch('https://ТВОЙ-СЕРВЕР.com/admin/update-member', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        
+        if(res.ok) { 
+            alert("Данные сохранены");
+            if(typeof loadMembers === 'function') loadMembers(); 
+        } else { 
+            alert("Ошибка! Проверь пароль или сервер."); 
+        }
+    } catch(err) {
+        alert("Ошибка соединения с сервером");
+    }
+}
+
+// ===== ДОСТИЖЕНИЯ =====
 function addReward(text) {
     let rewards = JSON.parse(localStorage.getItem('rewards') || "[]");
     rewards.push(text);
@@ -324,11 +361,12 @@ function addReward(text) {
 
 function renderRewards() {
     const el = document.getElementById('rewards');
+    if(!el) return;
     let rewards = JSON.parse(localStorage.getItem('rewards') || "[]");
     el.innerHTML = rewards.length ? rewards.map(r => `<li>🎁 ${r}</li>`).join("") : "<li>Нет наград</li>";
 }
 
-// ===== СБРОС =====
+// ===== ИНИЦИАЛИЗАЦИЯ =====
 function checkWeeklyReset() {
     const lastReset = localStorage.getItem('lastReset');
     const now = new Date();
@@ -344,28 +382,6 @@ function checkWeeklyReset() {
 checkWeeklyReset();
 renderTasks();
 renderRewards();
-    async function saveMember() {
-    const data = {
-        password: document.getElementById('pass').value,
-        name: document.getElementById('name').value,
-        rank: document.getElementById('rank').value,
-        warns: parseInt(document.getElementById('warns').value),
-        online: document.getElementById('online').value === "true"
-    };
-
-    // ЗАМЕНИ НА АДРЕС ВАШЕГО СЕРВЕРА
-    const res = await fetch('https://ТВОЙ-СЕРВЕР.com/admin/update-member', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data)
-    });
-    
-    if(res.ok) { 
-        loadMembers(); 
-    } else { 
-        alert("Ошибка! Проверь пароль или сервер."); 
-    }
-}
 </script>
 </body>
 </html>
