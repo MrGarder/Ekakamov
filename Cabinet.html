@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>EKAKAMOV | CONTROL HUB</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --accent: #ff0000; --bg: #050505; --card: #0a0a0a; }
+        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; }
+        
+        .main-grid { display: grid; grid-template-columns: 350px 1fr; gap: 20px; max-width: 1200px; margin: 0 auto; }
+        .glass-card { background: var(--card); border: 1px solid #222; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        
+        .info-row { margin-bottom: 12px; border-bottom: 1px solid #1a1a1a; padding-bottom: 5px; }
+        .info-label { color: #555; font-size: 10px; text-transform: uppercase; }
+        .info-val { font-weight: bold; }
+
+        .admin-col { display: none; }
+        .member-table { width: 100%; border-collapse: collapse; }
+        .member-table td, .member-table th { padding: 12px; border-bottom: 1px solid #1a1a1a; }
+
+        .task-item { background: #111; padding: 12px; border-left: 3px solid #333; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .cash-box { border: 1px solid #222; padding: 15px; text-align: center; margin-top: 10px; }
+
+        /* НОВОЕ: галерея */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+        }
+
+        .gallery-item {
+            position: relative;
+        }
+
+        .gallery-item img {
+            width: 100%;
+            border-radius: 6px;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #900;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        input[type="file"] {
+            margin-top: 10px;
+            width: 100%;
+        }
+        .stat-charts {
+    display: flex;
+    gap: 10px;
+}
+
+.stat-box {
+    flex: 1;
+    height: 140px;
+}
+
+.stat-box canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+    </style>
+</head>
+<body>
+
+<div class="main-grid">
+    <div class="glass-card">
+        <!-- АВАТАР -->
+        <div style="width: 90px; height: 90px; border: 2px solid var(--accent); border-radius: 50%; overflow:hidden;">
+            <img id="avatar" src="https://i.imgur.com/example.jpg" style="width:100%;">
+        </div>
+
+        <!-- НОВОЕ: загрузка аватара -->
+        <input type="file" accept="image/*" onchange="changeAvatar(event)">
+
+        <h2 style="margin:15px 0;">EKAKAMOV</h2>
+        
+        <div class="info-row"><div class="info-label">ИМЯ:</div> <div class="info-val">Garder Ekakamov</div></div>
+        <div class="info-row"><div class="info-label">РАНГ:</div> <div class="info-val">1 Разработчик</div></div>
+        <div class="info-row"><div class="info-label">ОТДЕЛ:</div> <div class="info-val">Разработки</div></div>
+        <div class="info-row"><div class="info-label">ДОЛЖНОСТЬ:</div> <div class="info-val">Глава Разработки</div></div>
+
+        <canvas id="miniRadar" style="margin: 20px 0;"></canvas>
+        <button onclick="logout()" style="width:100%; padding:10px; background:#400; border:1px solid var(--accent); color:#ff5555; cursor:pointer;">ВЫЙТИ ИЗ КАБИНЕТА</button>
+    </div>
+
+    <div>
+        <div class="glass-card" id="admin-panel">
+            <h3>УПРАВЛЕНИЕ УЧАСТНИКАМИ</h3>
+            <table class="member-table">
+                <thead><tr><th>НИК</th><th>РАНГ</th><th class="admin-col">ДЕЙСТВИЕ</th></tr></thead>
+                <tbody>
+                    <tr><td>EKAKAMOV</td><td>Глава</td><td class="admin-col"><button onclick="edit()">[EDIT]</button></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+      
+    <div class="glass-card">
+   <h3>ОПЕРАТИВНЫЕ ЗАДАЧИ</h3>
+
+<div id="taskList"></div>
+
+        <!-- НОВОЕ: ГАЛЕРЕЯ -->
+        <div class="glass-card">
+            <h3>ГАЛЕРЕЯ / ПАМЯТЬ</h3>
+            <input type="file" accept="image/*" multiple onchange="uploadImages(event)">
+            <div class="gallery-grid" id="gallery"></div>
+        </div>
+
+    </div>
+</div>
+<div class="glass-card">
+    <h3>📊 СТАТИСТИКА</h3>
+
+    <div style="display:flex; gap:10px;">
+        
+        <div style="flex:1; height:180px;">
+            <canvas id="activityChart"></canvas>
+        </div>
+
+        <div style="flex:1; height:180px;">
+            <canvas id="moneyChart"></canvas>
+        </div>
+
+    </div>
+
+    <div style="margin-top:10px;">
+        Выполнено задач: <b id="tasksDone">0</b>
+    </div>
+</div>
+<!-- XP СИСТЕМА -->
+<div class="glass-card" style="padding:12px;">
+    <h3 style="font-size:12px; margin-bottom:8px;">🧠 ПРОГРЕСС</h3>
+
+    <div style="display:flex; justify-content:space-between; font-size:11px;">
+        <div>LVL <b id="level">1</b></div>
+        <div><b id="xp">0</b> / <span id="xpNext">100</span> XP</div>
+    </div>
+
+    <div style="background:#111; height:8px; margin-top:8px; border-radius:4px; overflow:hidden;">
+        <div id="xpBar" style="
+            height:100%;
+            width:0%;
+            background: linear-gradient(90deg, #0f0, #00ff99);
+            transition: 0.3s;
+        "></div>
+    </div>
+</div>
+
+<!-- ДОСТИЖЕНИЯ -->
+<div class="glass-card">
+    <h3>🏆 ДОСТИЖЕНИЯ</h3>
+    <ul id="achievements"></ul>
+</div>
+
+<!-- НАГРАДЫ -->
+<div class="glass-card">
+    <h3>🎁 НАГРАДЫ</h3>
+    <ul id="rewards"></ul>
+</div>
+
+
+<script>
+// ===== СТАТИСТИКА =====
+const chartOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+};
+
+let activityData = JSON.parse(localStorage.getItem('activityData') || "[0,0,0,0,0,0,0]");
+
+let activityChart = new Chart(document.getElementById('activityChart'), {
+    type: 'line',
+    data: {
+        labels: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
+        datasets: [{
+            data: activityData,
+            borderColor: '#ff0000',
+            backgroundColor: 'rgba(255,0,0,0.1)',
+            fill: true
+        }]
+    },
+    options: chartOpts
+});
+
+// ===== XP И РАНГИ =====
+let xp = parseInt(localStorage.getItem('xp') || "0");
+let level = parseInt(localStorage.getItem('level') || "1");
+
+function updateXP() {
+    let next = level * 100;
+    document.getElementById('xp').innerText = xp;
+    document.getElementById('level').innerText = level;
+    document.getElementById('xpNext').innerText = next;
+    document.getElementById('xpBar').style.width = (xp / next) * 100 + "%";
+}
+
+updateXP();
+
+// ===== СИСТЕМА ЗАДАЧ С ОДОБРЕНИЕМ =====
+const tasksByLevel = {
+    1: ["Сдать устав", "Взнос 10к"],
+    2: ["Пригласить 2 чел", "Взнос 20к"],
+    3: ["Пригласить 3 чел", "Участие в каптах"],
+    4: ["Выполнить 5 поручений", "Помощь на собесе"],
+    5: ["Провести тренировку", "Активность в рации"],
+    6: ["Успешный рейд", "Полный отчет"]
+};
+
+let taskStatus = JSON.parse(localStorage.getItem('taskStatus') || "{}");
+
+function renderTasks() {
+    const container = document.getElementById('taskList');
+    if (!container) return;
+    container.innerHTML = "";
+
+    if (level > 6) {
+        container.innerHTML = "<div class='task-item'>Максимальный ранг достигнут!</div>";
+        return;
+    }
+
+    let currentTasks = tasksByLevel[level] || [];
+    currentTasks.forEach((task, index) => {
+        let status = taskStatus[level] ? taskStatus[level][index] : null;
+
+        const div = document.createElement('div');
+        div.className = "task-item";
+        
+        let content = `<span>${task}</span>`;
+        if (status === "pending") content += " <small style='color:orange'>(Ожидание одобрения)</small>";
+        else if (status === "done") content += " <b style='color:green'>[ОДОБРЕНО]</b>";
+        else content += ` <button onclick="requestApproval(${index})">Сдать</button>`;
+
+        div.innerHTML = content;
+        container.appendChild(div);
+    });
+}
+
+function requestApproval(index) {
+    if (!taskStatus[level]) taskStatus[level] = {};
+    taskStatus[level][index] = "pending";
+    localStorage.setItem('taskStatus', JSON.stringify(taskStatus));
+    renderTasks();
+}
+
+// ВЫЗЫВАЙ ЭТУ ФУНКЦИЮ ДЛЯ ОДОБРЕНИЯ (например: approveTask(1, 0))
+function approveTask(lvl, idx) {
+    if (!taskStatus[lvl]) return;
+    taskStatus[lvl][idx] = "done";
+    
+    // Статистика: теперь слева направо (Пн=0, Вс=6)
+    let dayIndex = new Date().getDay();
+    dayIndex = (dayIndex === 0 ? 6 : dayIndex - 1);
+    activityData[dayIndex] += 1;
+    localStorage.setItem('activityData', JSON.stringify(activityData));
+    activityChart.data.datasets[0].data = activityData;
+    activityChart.update();
+
+    // Проверка на повышение
+    let total = tasksByLevel[lvl].length;
+    let doneCount = 0;
+    for(let i=0; i < total; i++) { if(taskStatus[lvl][i] === "done") doneCount++; }
+
+    if (doneCount >= total && level < 6) {
+        level++;
+        localStorage.setItem('level', level);
+        addReward("🔥 Повышение до ранга: " + level);
+    }
+    
+    localStorage.setItem('taskStatus', JSON.stringify(taskStatus));
+    renderTasks();
+    updateXP();
+}
+
+// ===== ДОСТИЖЕНИЯ И НАГРАДЫ =====
+function addReward(text) {
+    let rewards = JSON.parse(localStorage.getItem('rewards') || "[]");
+    rewards.push(text);
+    localStorage.setItem('rewards', JSON.stringify(rewards));
+    renderRewards();
+}
+
+function renderRewards() {
+    const el = document.getElementById('rewards');
+    let rewards = JSON.parse(localStorage.getItem('rewards') || "[]");
+    el.innerHTML = rewards.length ? rewards.map(r => `<li>🎁 ${r}</li>`).join("") : "<li>Нет наград</li>";
+}
+
+// ===== СБРОС =====
+function checkWeeklyReset() {
+    const lastReset = localStorage.getItem('lastReset');
+    const now = new Date();
+    if (!lastReset) { localStorage.setItem('lastReset', now); return; }
+    if (Math.floor((now - new Date(lastReset)) / (1000 * 60 * 60 * 24)) >= 7) {
+        localStorage.setItem('activityData', JSON.stringify([0,0,0,0,0,0,0]));
+        localStorage.removeItem('taskStatus');
+        localStorage.setItem('lastReset', now);
+        location.reload();
+    }
+}
+
+checkWeeklyReset();
+renderTasks();
+renderRewards();
+</script>
+</body>
+</html>
