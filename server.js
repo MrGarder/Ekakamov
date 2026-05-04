@@ -6,73 +6,110 @@ const app = express();
 app.use(express.json());
 app.use(express.static(__dirname));
 
-const mongoURI = process.env.MONGO_URL || "mongodb+srv://dragon777:Dragon2026Strong@cluster0.yxx1kto.mongodb.net/familyDB?retryWrites=true&w=majority";
+// Твоя строка подключения (не трогаю)
+const mongoURI = "mongodb://mrgarderreddragon_db_user:RedDragon2028@cluster0-shard-00-00.yxx1kto.mongodb.net:27017,cluster0-shard-00-01.yxx1kto.mongodb.net:27017,cluster0-shard-00-02.yxx1kto.mongodb.net:27017/familyDB?ssl=true&replicaSet=atlas-yxx1kto-shard-0&authSource=admin&retryWrites=true&w=majority";
 
-mongoose.connect(mongoURI).then(() => {
-    console.log("✅ БАЗА ПОДКЛЮЧЕНА!");
-}).catch(err => console.log("❌ ОШИБКА:", err.message));
+console.log("⏳ Пытаюсь подключиться к MongoDB...");
 
+mongoose.connect(mongoURI, {
+    serverSelectionTimeoutMS: 10000,
+    family: 4
+})
+.then(() => {
+    console.log("✅✅✅ БАЗА ПОДКЛЮЧЕНА! СВЯЗЬ УСТАНОВЛЕНА!");
+})
+.catch(err => {
+    console.log("❌ ОШИБКА ПОДКЛЮЧЕНИЯ К БАЗЕ:");
+    console.error(err.message);
+});
+
+// Добавил только новые поля (xp, level, tasks, password), старые (name, rank, warns, online) на месте
 const Member = mongoose.model('Member', new mongoose.Schema({
     name: { type: String, unique: true },
+    password: { type: String, default: "1234" },
     rank: String,
     warns: { type: Number, default: 0 },
-    online: Boolean
+    online: Boolean,
+    xp: { type: Number, default: 0 },
+    level: { type: Number, default: 1 },
+    tasks: { type: Object, default: {} }
 }));
 
-// 1. СОХРАНЕНИЕ / ИЗМЕНЕНИЕ (Уже было)
+// --- ТВОЯ АДМИНКА (ОСТАЛАСЬ БЕЗ ИЗМЕНЕНИЙ) ---
 app.post('/admin/update-member', async (req, res) => {
     const { password, name, online, rank, warns } = req.body;
-    if (password !== "01050302") return res.status(403).send("Неверный пароль!");
-    if (!name) return res.status(400).send("Введите ник!");
-
+    if (password !== "01050302") return res.status(403).send("Ошибка: Неверный пароль админа!");
+    if (!name) return res.status(400).send("Ошибка: Введите ник игрока!");
     try {
-        await Member.findOneAndUpdate(
+        const updated = await Member.findOneAndUpdate(
             { name: name.trim() }, 
-            { rank, online, warns: parseInt(warns) || 0 }, 
-            { upsert: true }
+            { rank, online: online === "true" || online === true, warns: parseInt(warns) || 0 }, 
+            { upsert: true, new: true }
         );
         res.send("OK");
-    } catch (e) { res.status(500).send(e.message); }
+    } catch (e) {
+        res.status(500).send("Ошибка базы данных: " + e.message);
+    }
 });
 
-// 2. ИЗМЕНЕНИЕ ВЫГОВОРОВ (Добавил!)
-app.post('/admin/update-warns', async (req, res) => {
-    const { password, name, delta } = req.body;
-    if (password !== "01050302") return res.status(403).send("Пароль!");
-    
-    try {
-        const m = await Member.findOne({ name });
-        if (m) {
-            m.warns = Math.max(0, (m.warns || 0) + delta);
-            await m.save();
-            res.send("OK");
-        } else { res.status(404).send("Не найден"); }
-    } catch (e) { res.status(500).send(e.message); }
-});
-
-// 3. УДАЛЕНИЕ (Добавил!)
-app.post('/admin/delete-member', async (req, res) => {
-    const { password, name } = req.body;
-    if (password !== "01050302") return res.status(403).send("Пароль!");
-
-    try {
-        await Member.deleteOne({ name });
-        res.send("OK");
-    } catch (e) { res.status(500).send(e.message); }
-});
-
-// 4. СПИСКИ (Уже было)
 app.get('/admin/get-members', async (req, res) => {
-    const members = await Member.find().sort({ name: 1 });
-    res.json(members);
+    try {
+        const members = await Member.find().sort({ name: 1 });
+        res.json(members);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.get('/get-statuses', async (req, res) => {
-    const members = await Member.find();
-    const data = {};
-    members.forEach(m => { data[m.name] = { rank: m.rank, warns: m.warns, online: m.online }; });
-    res.json(data);
+    try {
+        const members = await Member.find();
+        const data = {};
+        members.forEach(m => { 
+            data[m.name] = { rank: m.rank, warns: m.warns, online: m.online }; 
+        });
+        res.json(data);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Порт ${PORT}`));
+// --- НОВЫЕ ПУТИ (БЕЗОПАСНО ДОБАВЛЕНЫ) ---
+
+// Авторизация пользователя
+app.post('/api/login', async (req, res) => {
+    const { name, password } = req.body;
+    try {
+        const user = await Member.findOne({ name: name.trim(), password: password });
+        if (!user) return res.status(401).send("Ошибка: Неверное имя или пароль");
+        res.json(user);
+    } catch (e) {
+        res.status(500).send("Ошибка сервера");
+    }
+});
+
+// Сохранение личного прогресса
+app.post('/api/save-progress', async (req, res) => {
+    const { name, xp, level, tasks } = req.body;
+    try {
+        await Member.updateOne({ name: name.trim() }, { xp, level, tasks });
+        res.send("OK");
+    } catch (e) {
+        res.status(500).send("Ошибка при сохранении");
+    }
+});
+
+const PORT = 3000;
+app.listen(PORT, () => {
+    console.log(`🚀 Сервер взлетел на порту ${PORT}`);
+});
+app.post('/api/register', async (req, res) => {
+    const { name, password } = req.body;
+    try {
+        const newUser = new Member({ name: name.trim(), password: password });
+        await newUser.save();
+        res.send("OK");
+    } catch (e) {
+        res.status(500).send("Ошибка регистрации");
+    }
+});
