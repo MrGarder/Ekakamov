@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <title>EKAKAMOV | CONTROL HUB</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
- <style>
+    <style>
         :root { --accent: #ff0000; --bg: #050505; --card: #0a0a0a; }
         body { background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; }
         
@@ -92,7 +91,20 @@
         <canvas id="miniRadar" style="margin: 20px 0;"></canvas>
         <button onclick="logout()" style="width:100%; padding:10px; background:#400; border:1px solid var(--accent); color:#ff5555; cursor:pointer;">ВЫЙТИ ИЗ КАБИНЕТА</button>
     </div>
-      <div class="glass-card">
+
+    <div>
+        <div class="glass-card" id="admin-panel">
+            <h3>УПРАВЛЕНИЕ УЧАСТНИКАМИ</h3>
+            <table class="member-table">
+                <thead><tr><th>НИК</th><th>РАНГ</th><th class="admin-col">ДЕЙСТВИЕ</th></tr></thead>
+                <tbody>
+                    <tr><td>EKAKAMOV</td><td>Глава</td><td class="admin-col"><button onclick="edit()">[EDIT]</button></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+      
+    <div class="glass-card">
    <h3>ОПЕРАТИВНЫЕ ЗАДАЧИ</h3>
 
 <div id="taskList"></div>
@@ -156,20 +168,7 @@
     <ul id="rewards"></ul>
 </div>
 
-<div class="glass-card" id="admin-panel">
-    <h3 style="font-size: 16px; margin-bottom: 10px;">УПРАВЛЕНИЕ</h3>
-    
-    <form onsubmit="event.preventDefault(); saveMember();">
-        <input type="password" id="pass" placeholder="Пароль админа">
-        <input type="text" id="name" placeholder="Ник">
-        <input type="number" id="warns" placeholder="Выг." style="width: 60px;">
-        <button type="submit" class="btn-add">СОХРАНИТЬ</button>
-    </form>
 
-    <div id="member-list-container">
-        </div>
-</div>
-</div>
 <script>
 // ===== СТАТИСТИКА =====
 const chartOpts = {
@@ -181,9 +180,7 @@ const chartOpts = {
 
 let activityData = JSON.parse(localStorage.getItem('activityData') || "[0,0,0,0,0,0,0]");
 
-// Инициализация графика (проверка на наличие canvas)
-const ctx = document.getElementById('activityChart');
-let activityChart = ctx ? new Chart(ctx, {
+let activityChart = new Chart(document.getElementById('activityChart'), {
     type: 'line',
     data: {
         labels: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
@@ -195,7 +192,7 @@ let activityChart = ctx ? new Chart(ctx, {
         }]
     },
     options: chartOpts
-}) : null;
+});
 
 // ===== XP И РАНГИ =====
 let xp = parseInt(localStorage.getItem('xp') || "0");
@@ -203,20 +200,15 @@ let level = parseInt(localStorage.getItem('level') || "1");
 
 function updateXP() {
     let next = level * 100;
-    const xpEl = document.getElementById('xp');
-    const lvlEl = document.getElementById('level');
-    const nextEl = document.getElementById('xpNext');
-    const barEl = document.getElementById('xpBar');
-    
-    if(xpEl) xpEl.innerText = xp;
-    if(lvlEl) lvlEl.innerText = level;
-    if(nextEl) nextEl.innerText = next;
-    if(barEl) barEl.style.width = (xp / next) * 100 + "%";
+    document.getElementById('xp').innerText = xp;
+    document.getElementById('level').innerText = level;
+    document.getElementById('xpNext').innerText = next;
+    document.getElementById('xpBar').style.width = (xp / next) * 100 + "%";
 }
 
 updateXP();
 
-// ===== СИСТЕМА ЗАДАЧ =====
+// ===== СИСТЕМА ЗАДАЧ С ОДОБРЕНИЕМ =====
 const tasksByLevel = {
     1: ["Сдать устав", "Взнос 10к"],
     2: ["Пригласить 2 чел", "Взнос 20к"],
@@ -241,11 +233,12 @@ function renderTasks() {
     let currentTasks = tasksByLevel[level] || [];
     currentTasks.forEach((task, index) => {
         let status = taskStatus[level] ? taskStatus[level][index] : null;
+
         const div = document.createElement('div');
         div.className = "task-item";
         
         let content = `<span>${task}</span>`;
-        if (status === "pending") content += " <small style='color:orange'>(Ожидание)</small>";
+        if (status === "pending") content += " <small style='color:orange'>(Ожидание одобрения)</small>";
         else if (status === "done") content += " <b style='color:green'>[ОДОБРЕНО]</b>";
         else content += ` <button onclick="requestApproval(${index})">Сдать</button>`;
 
@@ -261,20 +254,20 @@ function requestApproval(index) {
     renderTasks();
 }
 
+// ВЫЗЫВАЙ ЭТУ ФУНКЦИЮ ДЛЯ ОДОБРЕНИЯ (например: approveTask(1, 0))
 function approveTask(lvl, idx) {
     if (!taskStatus[lvl]) return;
     taskStatus[lvl][idx] = "done";
     
+    // Статистика: теперь слева направо (Пн=0, Вс=6)
     let dayIndex = new Date().getDay();
     dayIndex = (dayIndex === 0 ? 6 : dayIndex - 1);
     activityData[dayIndex] += 1;
     localStorage.setItem('activityData', JSON.stringify(activityData));
-    
-    if(activityChart) {
-        activityChart.data.datasets[0].data = activityData;
-        activityChart.update();
-    }
+    activityChart.data.datasets[0].data = activityData;
+    activityChart.update();
 
+    // Проверка на повышение
     let total = tasksByLevel[lvl].length;
     let doneCount = 0;
     for(let i=0; i < total; i++) { if(taskStatus[lvl][i] === "done") doneCount++; }
@@ -290,45 +283,7 @@ function approveTask(lvl, idx) {
     updateXP();
 }
 
-// ===== АДМИНКА И СОХРАНЕНИЕ =====
-async function saveMember() {
-    // Получаем элементы формы с проверкой, чтобы не было ошибок, если их нет
-    const passEl = document.getElementById('pass');
-    const nameEl = document.getElementById('name');
-    const rankEl = document.getElementById('rank');
-    const warnsEl = document.getElementById('warns');
-    const onlineEl = document.getElementById('online');
-
-    if(!passEl || !nameEl || !rankEl) return alert("Ошибка: форма не найдена!");
-
-    const data = {
-        password: passEl.value,
-        name: nameEl.value,
-        rank: rankEl.value,
-        warns: parseInt(warnsEl ? warnsEl.value : 0),
-        online: onlineEl ? (onlineEl.value === "true") : false
-    };
-
-    // ЗАМЕНИ 'https://ТВОЙ-СЕРВЕР.com' на реальный URL
-    try {
-        const res = await fetch('https://ТВОЙ-СЕРВЕР.com/admin/update-member', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        });
-        
-        if(res.ok) { 
-            alert("Данные сохранены");
-            if(typeof loadMembers === 'function') loadMembers(); 
-        } else { 
-            alert("Ошибка! Проверь пароль или сервер."); 
-        }
-    } catch(err) {
-        alert("Ошибка соединения с сервером");
-    }
-}
-
-// ===== ДОСТИЖЕНИЯ =====
+// ===== ДОСТИЖЕНИЯ И НАГРАДЫ =====
 function addReward(text) {
     let rewards = JSON.parse(localStorage.getItem('rewards') || "[]");
     rewards.push(text);
@@ -338,12 +293,11 @@ function addReward(text) {
 
 function renderRewards() {
     const el = document.getElementById('rewards');
-    if(!el) return;
     let rewards = JSON.parse(localStorage.getItem('rewards') || "[]");
     el.innerHTML = rewards.length ? rewards.map(r => `<li>🎁 ${r}</li>`).join("") : "<li>Нет наград</li>";
 }
 
-// ===== ИНИЦИАЛИЗАЦИЯ =====
+// ===== СБРОС =====
 function checkWeeklyReset() {
     const lastReset = localStorage.getItem('lastReset');
     const now = new Date();
