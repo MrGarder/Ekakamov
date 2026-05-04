@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -170,86 +171,149 @@
 
 
 <script>
-// ===== АВТОРИЗАЦИЯ =====
-let currentUser = localStorage.getItem('currentUser');
+// ===== СТАТИСТИКА =====
+const chartOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+};
 
-function login() {
-    let name = document.getElementById('loginInput').value;
-    if(!name) return;
-    localStorage.setItem('currentUser', name);
-    location.reload();
+let activityData = JSON.parse(localStorage.getItem('activityData') || "[0,0,0,0,0,0,0]");
+
+let activityChart = new Chart(document.getElementById('activityChart'), {
+    type: 'line',
+    data: {
+        labels: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
+        datasets: [{
+            data: activityData,
+            borderColor: '#ff0000',
+            backgroundColor: 'rgba(255,0,0,0.1)',
+            fill: true
+        }]
+    },
+    options: chartOpts
+});
+
+// ===== XP И РАНГИ =====
+let xp = parseInt(localStorage.getItem('xp') || "0");
+let level = parseInt(localStorage.getItem('level') || "1");
+
+function updateXP() {
+    let next = level * 100;
+    document.getElementById('xp').innerText = xp;
+    document.getElementById('level').innerText = level;
+    document.getElementById('xpNext').innerText = next;
+    document.getElementById('xpBar').style.width = (xp / next) * 100 + "%";
 }
 
-function logout() {
-    localStorage.removeItem('currentUser');
-    location.reload();
-}
+updateXP();
 
-if(currentUser) {
-    document.getElementById('auth-screen').style.display = 'none';
-}
+// ===== СИСТЕМА ЗАДАЧ С ОДОБРЕНИЕМ =====
+const tasksByLevel = {
+    1: ["Сдать устав", "Взнос 10к"],
+    2: ["Пригласить 2 чел", "Взнос 20к"],
+    3: ["Пригласить 3 чел", "Участие в каптах"],
+    4: ["Выполнить 5 поручений", "Помощь на собесе"],
+    5: ["Провести тренировку", "Активность в рации"],
+    6: ["Успешный рейд", "Полный отчет"]
+};
 
-// ===== ДАННЫЕ ПОЛЬЗОВАТЕЛЯ =====
-// Получаем данные конкретно для этого ника
-let userData = JSON.parse(localStorage.getItem('users') || "{}");
-if(!userData[currentUser]) {
-    userData[currentUser] = { xp: 0, level: 1, taskStatus: {}, achievements: [], rewards: [] };
-    localStorage.setItem('users', JSON.stringify(userData));
-}
+let taskStatus = JSON.parse(localStorage.getItem('taskStatus') || "{}");
 
-let user = userData[currentUser];
-
-// Функция сохранения
-function saveUser() {
-    userData[currentUser] = user;
-    localStorage.setItem('users', JSON.stringify(userData));
-}
-
-// ===== ЛОГИКА ЗАДАЧ (Теперь работает с user) =====
 function renderTasks() {
     const container = document.getElementById('taskList');
+    if (!container) return;
     container.innerHTML = "";
-    
-    (tasksByLevel[user.level] || []).forEach((task, index) => {
-        let status = user.taskStatus[user.level] ? user.taskStatus[user.level][index] : null;
+
+    if (level > 6) {
+        container.innerHTML = "<div class='task-item'>Максимальный ранг достигнут!</div>";
+        return;
+    }
+
+    let currentTasks = tasksByLevel[level] || [];
+    currentTasks.forEach((task, index) => {
+        let status = taskStatus[level] ? taskStatus[level][index] : null;
+
         const div = document.createElement('div');
         div.className = "task-item";
         
         let content = `<span>${task}</span>`;
-        if (status === "pending") content += " <small style='color:orange'>(Ожидание)</small>";
-        else if (status === "done") content += " <b style='color:green'>[ГОТОВО]</b>";
+        if (status === "pending") content += " <small style='color:orange'>(Ожидание одобрения)</small>";
+        else if (status === "done") content += " <b style='color:green'>[ОДОБРЕНО]</b>";
         else content += ` <button onclick="requestApproval(${index})">Сдать</button>`;
-        
+
         div.innerHTML = content;
         container.appendChild(div);
     });
 }
 
 function requestApproval(index) {
-    if (!user.taskStatus[user.level]) user.taskStatus[user.level] = {};
-    user.taskStatus[user.level][index] = "pending";
-    saveUser();
+    if (!taskStatus[level]) taskStatus[level] = {};
+    taskStatus[level][index] = "pending";
+    localStorage.setItem('taskStatus', JSON.stringify(taskStatus));
     renderTasks();
 }
 
-// Администратор одобряет (в будущем это будет серверный запрос)
+// ВЫЗЫВАЙ ЭТУ ФУНКЦИЮ ДЛЯ ОДОБРЕНИЯ (например: approveTask(1, 0))
 function approveTask(lvl, idx) {
-    user.taskStatus[lvl][idx] = "done";
+    if (!taskStatus[lvl]) return;
+    taskStatus[lvl][idx] = "done";
     
-    // Проверка повышения
+    // Статистика: теперь слева направо (Пн=0, Вс=6)
+    let dayIndex = new Date().getDay();
+    dayIndex = (dayIndex === 0 ? 6 : dayIndex - 1);
+    activityData[dayIndex] += 1;
+    localStorage.setItem('activityData', JSON.stringify(activityData));
+    activityChart.data.datasets[0].data = activityData;
+    activityChart.update();
+
+    // Проверка на повышение
     let total = tasksByLevel[lvl].length;
-    let done = Object.values(user.taskStatus[lvl]).filter(s => s === "done").length;
-    if (done >= total && user.level < 6) {
-        user.level++;
-        alert("Поздравляю, ваш ранг: " + user.level);
+    let doneCount = 0;
+    for(let i=0; i < total; i++) { if(taskStatus[lvl][i] === "done") doneCount++; }
+
+    if (doneCount >= total && level < 6) {
+        level++;
+        localStorage.setItem('level', level);
+        addReward("🔥 Повышение до ранга: " + level);
     }
-    saveUser();
+    
+    localStorage.setItem('taskStatus', JSON.stringify(taskStatus));
     renderTasks();
     updateXP();
 }
 
-// ОСТАЛЬНЫЕ ФУНКЦИИ (updateXP, renderRewards и т.д.) 
-// Просто используй переменные user.xp и user.level вместо глобальных
+// ===== ДОСТИЖЕНИЯ И НАГРАДЫ =====
+function addReward(text) {
+    let rewards = JSON.parse(localStorage.getItem('rewards') || "[]");
+    rewards.push(text);
+    localStorage.setItem('rewards', JSON.stringify(rewards));
+    renderRewards();
+}
+
+function renderRewards() {
+    const el = document.getElementById('rewards');
+    let rewards = JSON.parse(localStorage.getItem('rewards') || "[]");
+    el.innerHTML = rewards.length ? rewards.map(r => `<li>🎁 ${r}</li>`).join("") : "<li>Нет наград</li>";
+}
+
+// ===== СБРОС =====
+function checkWeeklyReset() {
+    const lastReset = localStorage.getItem('lastReset');
+    const now = new Date();
+    if (!lastReset) { localStorage.setItem('lastReset', now); return; }
+    if (Math.floor((now - new Date(lastReset)) / (1000 * 60 * 60 * 24)) >= 7) {
+        localStorage.setItem('activityData', JSON.stringify([0,0,0,0,0,0,0]));
+        localStorage.removeItem('taskStatus');
+        localStorage.setItem('lastReset', now);
+        location.reload();
+    }
+}
+
+checkWeeklyReset();
+renderTasks();
+renderRewards();
 </script>
 </body>
 </html>
