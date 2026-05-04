@@ -5,92 +5,93 @@
     <meta charset="UTF-8">
     <title>EKAKAMOV | CONTROL HUB</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root { --accent: #ff0000; --bg: #050505; --card: #0a0a0a; }
-        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; }
-        
-        .main-grid { display: grid; grid-template-columns: 350px 1fr; gap: 20px; max-width: 1200px; margin: 0 auto; }
-        .glass-card { background: var(--card); border: 1px solid #222; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        
-        .info-row { margin-bottom: 12px; border-bottom: 1px solid #1a1a1a; padding-bottom: 5px; }
-        .info-label { color: #555; font-size: 10px; text-transform: uppercase; }
-        .info-val { font-weight: bold; }
-
-        .admin-col { display: none; }
-        .member-table { width: 100%; border-collapse: collapse; }
-        .member-table td, .member-table th { padding: 12px; border-bottom: 1px solid #1a1a1a; }
-
-        .task-item { background: #111; padding: 12px; border-left: 3px solid #333; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .cash-box { border: 1px solid #222; padding: 15px; text-align: center; margin-top: 10px; }
-
-        /* НОВОЕ: галерея */
-        .gallery-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 10px;
-        }
-
-        .gallery-item {
-            position: relative;
-        }
-
-        .gallery-item img {
-            width: 100%;
-            border-radius: 6px;
-        }
-
-        .delete-btn {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background: #900;
-            border: none;
-            color: #fff;
-            cursor: pointer;
-            font-size: 10px;
-        }
-
-        input[type="file"] {
-            margin-top: 10px;
-            width: 100%;
-        }
-        .stat-charts {
-    display: flex;
-    gap: 10px;
-}
-
-.stat-box {
-    flex: 1;
-    height: 140px;
-}
-
-.stat-box canvas {
-    width: 100% !important;
-    height: 100% !important;
-}
-  /* Ограничиваем высоту карточки админки */
+   /* Основная карточка админки */
 #admin-panel {
-    max-height: 500px; /* Установи нужную высоту */
+    max-height: 400px; /* Высота для мобильных, чтобы не на весь экран */
     display: flex;
     flex-direction: column;
+    padding: 10px; /* Меньше отступы на мобильных */
 }
 
-/* Добавляем прокрутку для таблицы внутри карточки */
-.table-wrapper {
-    overflow-y: auto;
+/* Форма: делаем компактной */
+#admin-panel form {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+#admin-panel input, #admin-panel button {
+    font-size: 14px; /* Чтобы удобно было тыкать пальцем */
+    padding: 8px;
+    width: 100%; /* На всю ширину */
+    box-sizing: border-box; /* Чтобы padding не ломал ширину */
+}
+
+/* ЗАМЕНА ТАБЛИЦЫ: Контейнер для списка карточек */
+#member-list-container {
+    overflow-y: auto; /* Вертикальный скролл */
     flex-grow: 1;
-    border: 1px solid #222;
-    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* Отступы между карточками */
 }
 
-/* Уменьшаем шрифты внутри таблицы, чтобы влезло больше данных */
-.member-table {
-    font-size: 12px;
+/* Одна карточка участника */
+.member-card {
+    background: rgba(255, 255, 255, 0.03); /* Чуть светлее фона */
+    border: 1px solid #222;
+    border-radius: 4px;
+    padding: 8px;
+    display: flex;
+    justify-content: space-between; /* Ник слева, кнопки справа */
+    align-items: center;
 }
-.member-table td, .member-table th {
+
+/* Информация внутри карточки */
+.member-info {
+    display: flex;
+    flex-direction: column; /* Ник над рангом */
+    gap: 2px;
+}
+
+.member-name {
+    font-weight: bold;
+    font-size: 14px;
+    color: #fff;
+}
+
+.member-rank-text {
+    font-size: 11px;
+    color: #888;
+}
+
+/* Кнопки действий на мобильном */
+.member-actions {
+    display: flex;
+    gap: 5px;
+}
+
+/* Адаптивные кнопки */
+.btn-edit-mob, .btn-del-mob {
+    border: none;
+    color: #fff;
     padding: 6px;
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 12px; /* Чуть компактнее */
 }
-    </style>
+
+.btn-edit-mob { background: #2196F3; }
+.btn-del-mob { background: #f44336; }
+
+/* Для планшетов и ПК: делаем карточки шире */
+@media (min-width: 600px) {
+    .member-card {
+        padding: 10px 15px;
+    }
+    .member-name { font-size: 16px; }
+}
 </head>
 <body>
 
