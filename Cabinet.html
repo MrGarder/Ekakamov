@@ -68,6 +68,14 @@
     width: 100% !important;
     height: 100% !important;
 }
+        /* Добавь это в <style> */
+.member-table { width: 100%; border-collapse: collapse; background: #111; border-radius: 8px; margin-top: 10px; }
+.member-table th { background: #8b0000; padding: 10px; color: #fff; }
+.member-table td { padding: 10px; border-bottom: 1px solid #222; }
+.warn-btn { background: #333; border: 1px solid #444; color: #fff; cursor: pointer; padding: 2px 8px; }
+.btn-edit { background: #2196F3; border: none; color: #fff; padding: 5px; cursor: pointer; }
+.btn-del { background: #f44336; border: none; color: #fff; padding: 5px; cursor: pointer; }
+.warn-count { font-weight: bold; color: #ffeb3b; display: inline-block; width: 30px; text-align: center; }
     </style>
 </head>
 <body>
@@ -93,16 +101,18 @@
         <button onclick="logout()" style="width:100%; padding:10px; background:#400; border:1px solid var(--accent); color:#ff5555; cursor:pointer;">ВЫЙТИ ИЗ КАБИНЕТА</button>
     </div>
 
-    <div>
-        <div class="glass-card" id="admin-panel">
-            <h3>УПРАВЛЕНИЕ УЧАСТНИКАМИ</h3>
-            <table class="member-table">
-                <thead><tr><th>НИК</th><th>РАНГ</th><th class="admin-col">ДЕЙСТВИЕ</th></tr></thead>
-                <tbody>
-                    <tr><td>EKAKAMOV</td><td>Глава</td><td class="admin-col"><button onclick="edit()">[EDIT]</button></td></tr>
-                </tbody>
-            </table>
-        </div>
+    <div class="glass-card" id="admin-panel">
+    <h3>УПРАВЛЕНИЕ УЧАСТНИКАМИ</h3>
+    <input type="password" id="pass" placeholder="Пароль админа" style="width:100%; margin-bottom:5px;">
+    <input type="text" id="name" placeholder="Ник" style="width:45%;">
+    <input type="number" id="warns" placeholder="Выговоры" style="width:40%;">
+    <button onclick="saveMember()" style="width:100%; background:#8b0000; color:#fff; border:none; margin-top:5px;">СОХРАНИТЬ</button>
+    
+    <table class="member-table" id="memberTable">
+        <thead><tr><th>Ник</th><th>Ранг</th><th>Выг.</th><th>Действия</th></tr></thead>
+        <tbody></tbody>
+    </table>
+</div>
 
       
     <div class="glass-card">
@@ -314,6 +324,28 @@ function checkWeeklyReset() {
 checkWeeklyReset();
 renderTasks();
 renderRewards();
+    async function saveMember() {
+    const data = {
+        password: document.getElementById('pass').value,
+        name: document.getElementById('name').value,
+        rank: document.getElementById('rank').value,
+        warns: parseInt(document.getElementById('warns').value),
+        online: document.getElementById('online').value === "true"
+    };
+
+    // ЗАМЕНИ НА АДРЕС ВАШЕГО СЕРВЕРА
+    const res = await fetch('https://ТВОЙ-СЕРВЕР.com/admin/update-member', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    });
+    
+    if(res.ok) { 
+        loadMembers(); 
+    } else { 
+        alert("Ошибка! Проверь пароль или сервер."); 
+    }
+}
 </script>
 </body>
 </html>
