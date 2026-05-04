@@ -59,7 +59,8 @@
 
         /* ЦВЕТА РАНГОВ */
         .rank-badge { padding: 5px 12px; border-radius: 4px; font-weight: bold; font-size: 11px; text-transform: uppercase; display: inline-block; color: #fff; }
-        
+         
+        .rank-11 { background: #2006b8; }
         .rank-10 { background: #ff0000; box-shadow: 0 0 15px rgba(255,0,0,0.5); border: 1px solid #fff; }
         .rank-9  { background: #8b0000; border: 1px solid #ff0000; }
         .rank-8  { background: #ff8c00; }
@@ -122,7 +123,8 @@
     </div>
 
     <script>
-        const hierarchy = [
+         const hierarchy = [
+            {r: 11, n: "Разработчик", d: "Разработчик."},
             {r: 10, n: "Глава", d: "Лидер семьи."},
             {r: 9, n: "Зам. Главы", d: "Правая рука лидера."},
             {r: 8, n: "Гольд", d: "Старший советник."},
@@ -134,6 +136,7 @@
             {r: 2, n: "Равк", d: "Сдал устав."},
             {r: 1, n: "Кандидат", d: "На проверке."}
         ];
+
 
         const hBox = document.getElementById('hierarchy-box');
         hierarchy.forEach(item => {
