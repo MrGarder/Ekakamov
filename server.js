@@ -6,14 +6,15 @@ const app = express();
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Твоя строка подключения (не трогаю)
+// МАКСИМАЛЬНО ЖИВУЧАЯ СТРОКА (БЕЗ SRV)
+// Мы подключаемся напрямую к узлам кластера, обходя блокировки DNS
 const mongoURI = "mongodb://mrgarderreddragon_db_user:RedDragon2028@cluster0-shard-00-00.yxx1kto.mongodb.net:27017,cluster0-shard-00-01.yxx1kto.mongodb.net:27017,cluster0-shard-00-02.yxx1kto.mongodb.net:27017/familyDB?ssl=true&replicaSet=atlas-yxx1kto-shard-0&authSource=admin&retryWrites=true&w=majority";
 
 console.log("⏳ Пытаюсь подключиться к MongoDB...");
 
 mongoose.connect(mongoURI, {
-    serverSelectionTimeoutMS: 10000,
-    family: 4
+    serverSelectionTimeoutMS: 10000, // Ждем максимум 10 секунд
+    family: 4 // Принудительно используем IPv4 (часто помогает при кривых настройках провайдера)
 })
 .then(() => {
     console.log("✅✅✅ БАЗА ПОДКЛЮЧЕНА! СВЯЗЬ УСТАНОВЛЕНА!");
@@ -21,37 +22,42 @@ mongoose.connect(mongoURI, {
 .catch(err => {
     console.log("❌ ОШИБКА ПОДКЛЮЧЕНИЯ К БАЗЕ:");
     console.error(err.message);
+    console.log("-----------------------------------------");
+    console.log("СОВЕТ: Если видишь 'timeout', раздай интернет с ТЕЛЕФОНА и перезапусти сервер.");
 });
 
-// Добавил только новые поля (xp, level, tasks, password), старые (name, rank, warns, online) на месте
 const Member = mongoose.model('Member', new mongoose.Schema({
     name: { type: String, unique: true },
-    password: { type: String, default: "1234" },
     rank: String,
     warns: { type: Number, default: 0 },
-    online: Boolean,
-    xp: { type: Number, default: 0 },
-    level: { type: Number, default: 1 },
-    tasks: { type: Object, default: {} }
+    online: Boolean
 }));
 
-// --- ТВОЯ АДМИНКА (ОСТАЛАСЬ БЕЗ ИЗМЕНЕНИЙ) ---
+// ОБРАБОТКА СОХРАНЕНИЯ
 app.post('/admin/update-member', async (req, res) => {
     const { password, name, online, rank, warns } = req.body;
-    if (password !== "01050302") return res.status(403).send("Ошибка: Неверный пароль админа!");
+    
+    // Твой пароль админки
+    if (password !== "01050302") {
+        return res.status(403).send("Ошибка: Неверный пароль админа!");
+    }
     if (!name) return res.status(400).send("Ошибка: Введите ник игрока!");
+
     try {
         const updated = await Member.findOneAndUpdate(
             { name: name.trim() }, 
             { rank, online: online === "true" || online === true, warns: parseInt(warns) || 0 }, 
             { upsert: true, new: true }
         );
+        console.log(`✅ Игрок ${updated.name} обновлен в базе`);
         res.send("OK");
     } catch (e) {
+        console.error("❌ Ошибка при записи в БД:", e.message);
         res.status(500).send("Ошибка базы данных: " + e.message);
     }
 });
 
+// ПОЛУЧЕНИЕ ВСЕХ ЧЛЕНОВ (ДЛЯ АДМИНКИ)
 app.get('/admin/get-members', async (req, res) => {
     try {
         const members = await Member.find().sort({ name: 1 });
@@ -61,6 +67,7 @@ app.get('/admin/get-members', async (req, res) => {
     }
 });
 
+// ПОЛУЧЕНИЕ ДЛЯ ОСНОВНОЙ СТРАНИЦЫ
 app.get('/get-statuses', async (req, res) => {
     try {
         const members = await Member.find();
@@ -74,42 +81,8 @@ app.get('/get-statuses', async (req, res) => {
     }
 });
 
-// --- НОВЫЕ ПУТИ (БЕЗОПАСНО ДОБАВЛЕНЫ) ---
-
-// Авторизация пользователя
-app.post('/api/login', async (req, res) => {
-    const { name, password } = req.body;
-    try {
-        const user = await Member.findOne({ name: name.trim(), password: password });
-        if (!user) return res.status(401).send("Ошибка: Неверное имя или пароль");
-        res.json(user);
-    } catch (e) {
-        res.status(500).send("Ошибка сервера");
-    }
-});
-
-// Сохранение личного прогресса
-app.post('/api/save-progress', async (req, res) => {
-    const { name, xp, level, tasks } = req.body;
-    try {
-        await Member.updateOne({ name: name.trim() }, { xp, level, tasks });
-        res.send("OK");
-    } catch (e) {
-        res.status(500).send("Ошибка при сохранении");
-    }
-});
-
 const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Сервер взлетел на порту ${PORT}`);
-});
-app.post('/api/register', async (req, res) => {
-    const { name, password } = req.body;
-    try {
-        const newUser = new Member({ name: name.trim(), password: password });
-        await newUser.save();
-        res.send("OK");
-    } catch (e) {
-        res.status(500).send("Ошибка регистрации");
-    }
+    console.log(`🔗 Админка: http://localhost:${PORT}/admin.html`);
 });
