@@ -1,126 +1,115 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>EKAKAMOV | CONTROL HUB</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root { --accent: #ff0000; --bg: #050505; --card: #0a0a0a; }
-        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; }
-        
-        /* СЛОИ АВТОРИЗАЦИИ */
-        .auth-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: #000; z-index:999; display:flex; justify-content:center; align-items:center; }
-        .auth-box { width: 300px; padding: 20px; border: 1px solid var(--accent); border-radius: 8px; text-align: center; }
-        .auth-box input { width: 100%; padding: 10px; margin: 10px 0; background: #111; border: 1px solid #333; color: white; box-sizing: border-box; }
-        .auth-box button { width: 100%; padding: 10px; background: var(--accent); border: none; color: white; cursor: pointer; }
+const express = require('express');
+const mongoose = require('mongoose');
+const path = require('path');
+const app = express();
 
-        .main-grid { display: grid; grid-template-columns: 350px 1fr; gap: 20px; max-width: 1200px; margin: 0 auto; }
-        .glass-card { background: var(--card); border: 1px solid #222; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        .info-row { margin-bottom: 12px; border-bottom: 1px solid #1a1a1a; padding-bottom: 5px; }
-        .info-label { color: #555; font-size: 10px; text-transform: uppercase; }
-        .info-val { font-weight: bold; }
-        .task-item { background: #111; padding: 12px; border-left: 3px solid #333; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
-        .gallery-item { position: relative; }
-        .gallery-item img { width: 100%; border-radius: 6px; }
-    </style>
-</head>
-<body>
+app.use(express.json());
+app.use(express.static(__dirname));
 
-<div id="reg-screen" class="auth-overlay">
-    <div class="auth-box">
-        <h3>РЕГИСТРАЦИЯ</h3>
-        <input type="text" id="regName" placeholder="Никнейм">
-        <input type="password" id="regPass" placeholder="Пароль">
-        <button onclick="register()">ЗАРЕГИСТРИРОВАТЬСЯ</button>
-        <p style="cursor:pointer; color:#555;" onclick="showLogin()">Уже есть аккаунт? Вход</p>
-    </div>
-</div>
+// Твоя строка подключения (не трогаю)
+const mongoURI = "mongodb://mrgarderreddragon_db_user:RedDragon2028@cluster0-shard-00-00.yxx1kto.mongodb.net:27017,cluster0-shard-00-01.yxx1kto.mongodb.net:27017,cluster0-shard-00-02.yxx1kto.mongodb.net:27017/familyDB?ssl=true&replicaSet=atlas-yxx1kto-shard-0&authSource=admin&retryWrites=true&w=majority";
 
-<div id="login-screen" class="auth-overlay" style="display:none;">
-    <div class="auth-box">
-        <h3>ВХОД</h3>
-        <input type="text" id="logName" placeholder="Никнейм">
-        <input type="password" id="logPass" placeholder="Пароль">
-        <button onclick="login()">ВОЙТИ</button>
-        <p style="cursor:pointer; color:#555;" onclick="showReg()">Нет аккаунта? Регистрация</p>
-    </div>
-</div>
+console.log("⏳ Пытаюсь подключиться к MongoDB...");
 
-<div class="main-grid" id="main-content" style="display:none;">
-    <div class="glass-card">
-        <div style="width: 90px; height: 90px; border: 2px solid var(--accent); border-radius: 50%; overflow:hidden;">
-            <img id="avatar" src="https://i.imgur.com/example.jpg" style="width:100%;">
-        </div>
-        <input type="file" accept="image/*" onchange="changeAvatar(event)">
-        <h2 style="margin:15px 0;">EKAKAMOV</h2>
-        <div class="info-row"><div class="info-label">ИМЯ:</div> <div class="info-val" id="displayUser">Garder Ekakamov</div></div>
-        <button onclick="logout()" style="width:100%; padding:10px; background:#400; border:1px solid var(--accent); color:#ff5555; cursor:pointer;">ВЫЙТИ ИЗ КАБИНЕТА</button>
-    </div>
+mongoose.connect(mongoURI, {
+    serverSelectionTimeoutMS: 10000,
+    family: 4
+})
+.then(() => {
+    console.log("✅✅✅ БАЗА ПОДКЛЮЧЕНА! СВЯЗЬ УСТАНОВЛЕНА!");
+})
+.catch(err => {
+    console.log("❌ ОШИБКА ПОДКЛЮЧЕНИЯ К БАЗЕ:");
+    console.error(err.message);
+});
 
-    <div>
-        <div class="glass-card" id="admin-panel"><h3>Информация о фаме</h3></div>
-        <div class="glass-card">
-            <h3>ОПЕРАТИВНЫЕ ЗАДАЧИ</h3>
-            <div id="taskList"></div>
-            <h3>ГАЛЕРЕЯ / ПАМЯТЬ</h3>
-            <input type="file" accept="image/*" multiple onchange="uploadImages(event)">
-            <div class="gallery-grid" id="gallery"></div>
-        </div>
-    </div>
-</div>
+// Добавил только новые поля (xp, level, tasks, password), старые (name, rank, warns, online) на месте
+const Member = mongoose.model('Member', new mongoose.Schema({
+    name: { type: String, unique: true },
+    password: { type: String, default: "1234" },
+    rank: String,
+    warns: { type: Number, default: 0 },
+    online: Boolean,
+    xp: { type: Number, default: 0 },
+    level: { type: Number, default: 1 },
+    tasks: { type: Object, default: {} }
+}));
 
-<script>
-// ЛОГИКА АВТОРИЗАЦИИ
-function showLogin() { document.getElementById('reg-screen').style.display = 'none'; document.getElementById('login-screen').style.display = 'flex'; }
-function showReg() { document.getElementById('reg-screen').style.display = 'flex'; document.getElementById('login-screen').style.display = 'none'; }
+// --- ТВОЯ АДМИНКА (ОСТАЛАСЬ БЕЗ ИЗМЕНЕНИЙ) ---
+app.post('/admin/update-member', async (req, res) => {
+    const { password, name, online, rank, warns } = req.body;
+    if (password !== "01050302") return res.status(403).send("Ошибка: Неверный пароль админа!");
+    if (!name) return res.status(400).send("Ошибка: Введите ник игрока!");
+    try {
+        const updated = await Member.findOneAndUpdate(
+            { name: name.trim() }, 
+            { rank, online: online === "true" || online === true, warns: parseInt(warns) || 0 }, 
+            { upsert: true, new: true }
+        );
+        res.send("OK");
+    } catch (e) {
+        res.status(500).send("Ошибка базы данных: " + e.message);
+    }
+});
 
-async function register() {
-    const name = document.getElementById('regName').value;
-    const password = document.getElementById('regPass').value;
-    const res = await fetch('/api/register', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name, password }) });
-    if(res.ok) { alert("Регистрация успешна!"); showLogin(); } else { alert("Ошибка!"); }
-}
+app.get('/admin/get-members', async (req, res) => {
+    try {
+        const members = await Member.find().sort({ name: 1 });
+        res.json(members);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
-async function login() {
-    const name = document.getElementById('logName').value;
-    const password = document.getElementById('logPass').value;
-    const res = await fetch('/api/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name, password }) });
-    if(res.ok) {
-        document.getElementById('displayUser').innerText = name;
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('main-content').style.display = 'grid';
-    } else { alert("Неверные данные!"); }
-}
+app.get('/get-statuses', async (req, res) => {
+    try {
+        const members = await Member.find();
+        const data = {};
+        members.forEach(m => { 
+            data[m.name] = { rank: m.rank, warns: m.warns, online: m.online }; 
+        });
+        res.json(data);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
-function logout() { location.reload(); }
+// --- НОВЫЕ ПУТИ (БЕЗОПАСНО ДОБАВЛЕНЫ) ---
 
-// ===== ТВОЙ СТАРЫЙ КОД (НИЧЕГО НЕ ВЫРЕЗАЛ) =====
-const chartOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } };
-let activityData = JSON.parse(localStorage.getItem('activityData') || "[0,0,0,0,0,0,0]");
-let activityChart = new Chart(document.getElementById('activityChart'), { type: 'line', data: { labels: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'], datasets: [{ data: activityData, borderColor: '#ff0000', backgroundColor: 'rgba(255,0,0,0.1)', fill: true }] }, options: chartOpts });
+// Авторизация пользователя
+app.post('/api/login', async (req, res) => {
+    const { name, password } = req.body;
+    try {
+        const user = await Member.findOne({ name: name.trim(), password: password });
+        if (!user) return res.status(401).send("Ошибка: Неверное имя или пароль");
+        res.json(user);
+    } catch (e) {
+        res.status(500).send("Ошибка сервера");
+    }
+});
 
-let xp = parseInt(localStorage.getItem('xp') || "0");
-let level = parseInt(localStorage.getItem('level') || "1");
-function updateXP() { let next = level * 100; document.getElementById('xp').innerText = xp; document.getElementById('level').innerText = level; document.getElementById('xpBar').style.width = (xp / next) * 100 + "%"; }
-updateXP();
+// Сохранение личного прогресса
+app.post('/api/save-progress', async (req, res) => {
+    const { name, xp, level, tasks } = req.body;
+    try {
+        await Member.updateOne({ name: name.trim() }, { xp, level, tasks });
+        res.send("OK");
+    } catch (e) {
+        res.status(500).send("Ошибка при сохранении");
+    }
+});
 
-const tasksByLevel = { 1: ["Сдать устав", "Взнос 10к"], 2: ["Пригласить 2 чел", "Взнос 20к"], 3: ["Пригласить 3 чел", "Участие в каптах"], 4: ["Выполнить 5 поручений", "Помощь на собесе"], 5: ["Провести тренировку", "Активность в рации"], 6: ["Успешный рейд", "Полный отчет"] };
-let taskStatus = JSON.parse(localStorage.getItem('taskStatus') || "{}");
-
-function renderTasks() {
-    const container = document.getElementById('taskList');
-    if (!container) return; container.innerHTML = "";
-    if (level > 6) { container.innerHTML = "<div class='task-item'>Максимальный ранг достигнут!</div>"; return; }
-    (tasksByLevel[level] || []).forEach((task, index) => {
-        let status = taskStatus[level] ? taskStatus[level][index] : null;
-        const div = document.createElement('div'); div.className = "task-item";
-        div.innerHTML = `<span>${task}</span>` + (status === "done" ? " <b style='color:green'>[ОДОБРЕНО]</b>" : ` <button onclick="requestApproval(${index})">Сдать</button>`);
-        container.appendChild(div);
-    });
-}
-function requestApproval(index) { if (!taskStatus[level]) taskStatus[level] = {}; taskStatus[level][index] = "pending"; renderTasks(); }
-renderTasks();
-</script>
-</body>
-</html>
+const PORT = 3000;
+app.listen(PORT, () => {
+    console.log(`🚀 Сервер взлетел на порту ${PORT}`);
+});
+app.post('/api/register', async (req, res) => {
+    const { name, password } = req.body;
+    try {
+        const newUser = new Member({ name: name.trim(), password: password });
+        await newUser.save();
+        res.send("OK");
+    } catch (e) {
+        res.status(500).send("Ошибка регистрации");
+    }
+});         вот мой полный server js код 
