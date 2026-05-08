@@ -70,13 +70,14 @@ app.get("/admin/get-members", (req, res) => {
 
 app.post("/admin/update-member", (req, res) => {
 
-    const {
-        password,
-        name,
-        rank,
-        warns,
-        online
-    } = req.body;
+  const {
+    password,
+    name,
+    rank,
+    warns,
+    online,
+    avatar
+} = req.body;
 
     if (password !== "admin123") {
         return res.status(403).send("wrong password");
@@ -90,18 +91,20 @@ app.post("/admin/update-member", (req, res) => {
 
     if (existing) {
 
-        existing.rank = rank;
-        existing.warns = warns;
-        existing.online = online;
+    existing.rank = rank;
+    existing.warns = warns;
+    existing.online = online;
+    existing.avatar = avatar;
 
     } else {
 
         members.push({
-            name,
-            rank,
-            warns,
-            online
-        });
+    name,
+    rank,
+    warns,
+    online,
+    avatar
+});
     }
 
     writeDB(members);
