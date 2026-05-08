@@ -538,20 +538,20 @@ function register() {
         return alert("Пользователь уже есть");
     }
 
-    const user = {
-        name,
-        password,
-         rank: 1,
-        department: "Без отдела",
-        position: "Участник",
-        warns: 0,
-        xp: 0,
-        level: 1,
-        taskStatus: {},
-        activityData: [0,0,0,0,0,0,0],
-        avatar: "",
-        gallery: []
-    };
+   const user = {
+    name,
+    password,
+    rank: "[1] Кандидат",
+    department: "Без отдела",
+    position: "Участник",
+    warns: 0,
+    xp: 0,
+    level: 1,
+    taskStatus: {},
+    activityData: [0,0,0,0,0,0,0],
+    avatar: "",
+    gallery: []
+};
 
     localStorage.setItem("user_" + name, JSON.stringify(user));
     localStorage.setItem("currentUser", name);
@@ -613,7 +613,8 @@ const rankNames = {
 
 // ===== ПРОФИЛЬ =====
 function loadProfile(user) {
-
+    
+    localStorage.removeItem("viewProfile");
     el('userName').innerText = user.name;
 
     el('userNameInfo').innerHTML = `
@@ -621,14 +622,17 @@ function loadProfile(user) {
         <span style="color:white;"> ${user.name}</span>
     `;
 
-    // РАНГ
-    el('userRank').innerHTML = `
-        <span style="color:#777;"></span>
-        <span class="rank-badge rank-${user.rank}">
-            ${rankNames[user.rank] || "Без ранга"}
-        </span>
-    `;
+   // РАНГ
+el('userRank').innerHTML = `
+    <span style="color:#777;"></span>
 
+    <span class="
+        rank-badge
+        ${getRankClass(user.rank)}
+    ">
+        ${user.rank || "Без ранга"}
+    </span>
+`;
     // ОТДЕЛ
     el('userDept').innerHTML = `
         <span style="color:#777;"></span>
@@ -671,7 +675,13 @@ function startSession(user) {
     el('main-content').style.display = 'grid';
 
     // ===== КНОПКА АДМИНКИ =====
-    if (user.rank >= 9) {
+    if (
+
+        user.rank.includes("[9]") ||
+        user.rank.includes("[10]") ||
+        user.rank.includes("[11]")
+
+    ) {
 
         const adminBox = el('adminButtonBox');
 
@@ -680,10 +690,13 @@ function startSession(user) {
         }
     }
 
+    // ===== ЗАГРУЗКА ВСЕГО =====
     setTimeout(() => {
+
         initCharts();
         renderTasks();
         renderGallery();
+
     }, 100);
 }
 
@@ -719,6 +732,51 @@ function updateXP() {
     saveUser();
 }
 
+
+function getRankClass(rank){
+
+    if(rank.includes("[11]")){
+        return "rank-11";
+    }
+
+    if(rank.includes("[10]")){
+        return "rank-10";
+    }
+
+    if(rank.includes("[9]")){
+        return "rank-9";
+    }
+
+    if(rank.includes("[8]")){
+        return "rank-8";
+    }
+
+    if(rank.includes("[7]")){
+        return "rank-7";
+    }
+
+    if(rank.includes("[6]")){
+        return "rank-6";
+    }
+
+    if(rank.includes("[5]")){
+        return "rank-5";
+    }
+
+    if(rank.includes("[4]")){
+        return "rank-4";
+    }
+
+    if(rank.includes("[3]")){
+        return "rank-3";
+    }
+
+    if(rank.includes("[2]")){
+        return "rank-2";
+    }
+
+    return "rank-1";
+}
 const tasksByLevel = {
 
     1: [
@@ -1167,18 +1225,54 @@ function logout() {
 }
 
 // ===== АВТОЛОГИН =====
-window.onload = () => {
-    const current = localStorage.getItem("currentUser");
+window.onload = async () => {
 
-    if (current) {
-        const user = JSON.parse(localStorage.getItem("user_" + current));
+    const current =
+        localStorage.getItem("viewProfile")
+        || localStorage.getItem("currentUser");
 
-        if (user) {
-            startSession(user);
+    if (!current) return;
+
+    let user = JSON.parse(
+        localStorage.getItem("user_" + current)
+    );
+
+    if (!user) return;
+
+    try {
+
+        // БЕРЁМ ДАННЫЕ ИЗ АДМИНКИ
+        const res = await fetch('/admin/get-members');
+
+        const members = await res.json();
+
+        const member = members.find(
+            m => m.name === current
+        );
+
+        // ЕСЛИ НАШЛИ
+        if(member){
+
+            user.rank = member.rank;
+            user.warns = member.warns;
+            user.online = member.online;
+
+            // СОХРАНЯЕМ
+            localStorage.setItem(
+                "user_" + current,
+                JSON.stringify(user)
+            );
         }
-    }
-};
 
+    } catch(err){
+
+        console.log(err);
+    }
+
+    startSession(user);
+
+    localStorage.removeItem("viewProfile");
+};
 </script>
 </div>
 </div>
