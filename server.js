@@ -15,7 +15,42 @@ if (!fs.existsSync(DB)) {
 }
 
 function readDB() {
-    return JSON.parse(fs.readFileSync(DB));
+
+    try {
+
+        const data = fs.readFileSync(
+            DB,
+            "utf8"
+        );
+
+        // ЕСЛИ ФАЙЛ ПУСТОЙ
+        if (!data || data.trim() === "") {
+
+            fs.writeFileSync(DB, "[]");
+
+            return [];
+        }
+
+        const parsed = JSON.parse(data);
+
+        // ЕСЛИ НЕ МАССИВ
+        if (!Array.isArray(parsed)) {
+
+            fs.writeFileSync(DB, "[]");
+
+            return [];
+        }
+
+        return parsed;
+
+    } catch(err) {
+
+        console.log("DB ERROR:", err);
+
+        fs.writeFileSync(DB, "[]");
+
+        return [];
+    }
 }
 
 function writeDB(data) {
@@ -137,6 +172,6 @@ app.post("/admin/delete-member", (req, res) => {
     res.sendStatus(200);
 });
 
-app.listen(3000, () => {
+app.listen(process.env.PORT || 3000, () => {
     console.log("SERVER STARTED");
 });
