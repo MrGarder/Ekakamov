@@ -1253,16 +1253,18 @@ window.onload = async () => {
         // ЕСЛИ НАШЛИ
         if(member){
 
-            user.rank = member.rank;
-            user.warns = member.warns;
-            user.online = member.online;
+    user.rank = member.rank;
+    user.warns = member.warns;
+    user.online = member.online;
 
-            // СОХРАНЯЕМ
-            localStorage.setItem(
-                "user_" + current,
-                JSON.stringify(user)
-            );
-        }
+    // АВАТАР С СЕРВЕРА
+    user.avatar = member.avatar || user.avatar;
+
+    localStorage.setItem(
+        "user_" + current,
+        JSON.stringify(user)
+    );
+}
 
     } catch(err){
 
