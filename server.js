@@ -1,88 +1,142 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const path = require('path');
+const express = require("express");
+const fs = require("fs");
+const cors = require("cors");
+
 const app = express();
 
+app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// МАКСИМАЛЬНО ЖИВУЧАЯ СТРОКА (БЕЗ SRV)
-// Мы подключаемся напрямую к узлам кластера, обходя блокировки DNS
-const mongoURI = "mongodb://mrgarderreddragon_db_user:RedDragon2028@cluster0-shard-00-00.yxx1kto.mongodb.net:27017,cluster0-shard-00-01.yxx1kto.mongodb.net:27017,cluster0-shard-00-02.yxx1kto.mongodb.net:27017/familyDB?ssl=true&replicaSet=atlas-yxx1kto-shard-0&authSource=admin&retryWrites=true&w=majority";
+const DB = "./members.json";
 
-console.log("⏳ Пытаюсь подключиться к MongoDB...");
+if (!fs.existsSync(DB)) {
+    fs.writeFileSync(DB, "[]");
+}
 
-mongoose.connect(mongoURI, {
-    serverSelectionTimeoutMS: 10000, // Ждем максимум 10 секунд
-    family: 4 // Принудительно используем IPv4 (часто помогает при кривых настройках провайдера)
-})
-.then(() => {
-    console.log("✅✅✅ БАЗА ПОДКЛЮЧЕНА! СВЯЗЬ УСТАНОВЛЕНА!");
-})
-.catch(err => {
-    console.log("❌ ОШИБКА ПОДКЛЮЧЕНИЯ К БАЗЕ:");
-    console.error(err.message);
-    console.log("-----------------------------------------");
-    console.log("СОВЕТ: Если видишь 'timeout', раздай интернет с ТЕЛЕФОНА и перезапусти сервер.");
+function readDB() {
+    return JSON.parse(fs.readFileSync(DB));
+}
+
+function writeDB(data) {
+    fs.writeFileSync(DB, JSON.stringify(data, null, 2));
+}
+
+// ===== ПОЛУЧИТЬ ВСЕХ =====
+
+app.get("/admin/get-members", (req, res) => {
+
+    const members = readDB();
+
+    res.json(members);
 });
 
-const Member = mongoose.model('Member', new mongoose.Schema({
-    name: { type: String, unique: true },
-    rank: String,
-    warns: { type: Number, default: 0 },
-    online: Boolean
-}));
+// ===== СОХРАНИТЬ =====
 
-// ОБРАБОТКА СОХРАНЕНИЯ
-app.post('/admin/update-member', async (req, res) => {
-    const { password, name, online, rank, warns } = req.body;
-    
-    // Твой пароль админки
-    if (password !== "01050302") {
-        return res.status(403).send("Ошибка: Неверный пароль админа!");
+app.post("/admin/update-member", (req, res) => {
+
+    const {
+        password,
+        name,
+        rank,
+        warns,
+        online
+    } = req.body;
+
+    if (password !== "admin123") {
+        return res.status(403).send("wrong password");
     }
-    if (!name) return res.status(400).send("Ошибка: Введите ник игрока!");
 
-    try {
-        const updated = await Member.findOneAndUpdate(
-            { name: name.trim() }, 
-            { rank, online: online === "true" || online === true, warns: parseInt(warns) || 0 }, 
-            { upsert: true, new: true }
-        );
-        console.log(`✅ Игрок ${updated.name} обновлен в базе`);
-        res.send("OK");
-    } catch (e) {
-        console.error("❌ Ошибка при записи в БД:", e.message);
-        res.status(500).send("Ошибка базы данных: " + e.message);
-    }
-});
+    let members = readDB();
 
-// ПОЛУЧЕНИЕ ВСЕХ ЧЛЕНОВ (ДЛЯ АДМИНКИ)
-app.get('/admin/get-members', async (req, res) => {
-    try {
-        const members = await Member.find().sort({ name: 1 });
-        res.json(members);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+    let existing = members.find(
+        m => m.name === name
+    );
 
-// ПОЛУЧЕНИЕ ДЛЯ ОСНОВНОЙ СТРАНИЦЫ
-app.get('/get-statuses', async (req, res) => {
-    try {
-        const members = await Member.find();
-        const data = {};
-        members.forEach(m => { 
-            data[m.name] = { rank: m.rank, warns: m.warns, online: m.online }; 
+    if (existing) {
+
+        existing.rank = rank;
+        existing.warns = warns;
+        existing.online = online;
+
+    } else {
+
+        members.push({
+            name,
+            rank,
+            warns,
+            online
         });
-        res.json(data);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
     }
+
+    writeDB(members);
+
+    res.sendStatus(200);
 });
 
-const PORT = 3000;
-app.listen(PORT, () => {
-    console.log(`🚀 Сервер взлетел на порту ${PORT}`);
-    console.log(`🔗 Админка: http://localhost:${PORT}/admin.html`);
+// ===== ВЫГОВОРЫ =====
+
+app.post("/admin/update-warns", (req, res) => {
+
+    const {
+        password,
+        name,
+        delta
+    } = req.body;
+
+    if (password !== "admin123") {
+        return res.status(403).send("wrong password");
+    }
+
+    let members = readDB();
+
+    let user = members.find(
+        m => m.name === name
+    );
+
+    if (!user) {
+        return res.sendStatus(404);
+    }
+
+    if (!user.warns) {
+        user.warns = 0;
+    }
+
+    user.warns += delta;
+
+    if (user.warns < 0) {
+        user.warns = 0;
+    }
+
+    writeDB(members);
+
+    res.sendStatus(200);
+});
+
+// ===== УДАЛЕНИЕ =====
+
+app.post("/admin/delete-member", (req, res) => {
+
+    const {
+        password,
+        name
+    } = req.body;
+
+    if (password !== "admin123") {
+        return res.status(403).send("wrong password");
+    }
+
+    let members = readDB();
+
+    members = members.filter(
+        m => m.name !== name
+    );
+
+    writeDB(members);
+
+    res.sendStatus(200);
+});
+
+app.listen(3000, () => {
+    console.log("SERVER STARTED");
 });
