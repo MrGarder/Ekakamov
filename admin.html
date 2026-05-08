@@ -584,26 +584,36 @@ function fillForm(name, rank, warns, online){
 
 async function saveMember(){
 
-    const data = {
+   const localUser = JSON.parse(
+    localStorage.getItem(
+        "user_" +
+        document.getElementById('name').value
+    )
+);
 
-        password:
-            document.getElementById('pass').value,
+const data = {
 
-        name:
-            document.getElementById('name').value,
+    password:
+        document.getElementById('pass').value,
 
-        rank:
-            document.getElementById('rank').value,
+    name:
+        document.getElementById('name').value,
 
-        warns:
-            parseInt(
-                document.getElementById('warns').value
-            ),
+    rank:
+        document.getElementById('rank').value,
 
-        online:
-            document.getElementById('online').value
-            === "true"
-    };
+    warns:
+        parseInt(
+            document.getElementById('warns').value
+        ),
+
+    online:
+        document.getElementById('online').value
+        === "true",
+
+    avatar:
+        localUser?.avatar || ""
+};
 
     const res = await fetch(
         '/admin/update-member',
