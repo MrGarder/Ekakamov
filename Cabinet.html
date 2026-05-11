@@ -833,20 +833,28 @@ function startSession(user) {
     el('main-content').style.display = 'grid';
 
     // ===== КНОПКА АДМИНКИ =====
-    if (user.rank >= 9) {
+ if (
 
-        const adminBox = el('adminButtonBox');
+    user.rank.includes("[9]") ||
+    user.rank.includes("[10]") ||
+    user.rank.includes("[11]")
 
-        if (adminBox) {
-            adminBox.style.display = "block";
-        }
+) {
+
+    const adminBox = el('adminButtonBox');
+
+    if (adminBox) {
+        adminBox.style.display = "block";
     }
+}
 
-    setTimeout(() => {
-        initCharts();
-        renderTasks();
-        renderGallery();
-    }, 100);
+setTimeout(() => {
+
+    initCharts();
+    renderTasks();
+    renderGallery();
+
+}, 100);
 }
 
 // ===== ОТКРЫТЬ АДМИНКУ =====
