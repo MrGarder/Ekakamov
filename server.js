@@ -1,180 +1,276 @@
 const express = require("express");
-const fs = require("fs");
+const mongoose = require("mongoose");
 const cors = require("cors");
 
 const app = express();
 
+// ===== MIDDLEWARE =====
+
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({
+    extended: true,
+    limit: "50mb"
+}));
+
 app.use(express.static(__dirname));
 
-const DB = "./members.json";
+// ===== MONGODB =====
 
-if (!fs.existsSync(DB)) {
-    fs.writeFileSync(DB, "[]");
-}
 
-function readDB() {
+mongoose.connect(
+"mongodb+srv://admin:05060403@cluster0.rnxra9s.mongodb.net/ekakamov?retryWrites=true&w=majority&appName=Cluster0"
+)
 
-    try {
+.then(() => {
 
-        const data = fs.readFileSync(
-            DB,
-            "utf8"
-        );
+    console.log("MONGO CONNECTED");
 
-        // ЕСЛИ ФАЙЛ ПУСТОЙ
-        if (!data || data.trim() === "") {
+})
+.catch(err => {
 
-            fs.writeFileSync(DB, "[]");
+    console.log("MONGO ERROR:", err);
 
-            return [];
-        }
+});
 
-        const parsed = JSON.parse(data);
+// ===== SCHEMA =====
 
-        // ЕСЛИ НЕ МАССИВ
-        if (!Array.isArray(parsed)) {
+const MemberSchema = new mongoose.Schema({
 
-            fs.writeFileSync(DB, "[]");
+    name: String,
+    rank: String,
+    warns: Number,
+    online: Boolean,
+    avatar: String,
 
-            return [];
-        }
+    // ГАЛЕРЕЯ
+    gallery: [String]
 
-        return parsed;
+});
 
-    } catch(err) {
-
-        console.log("DB ERROR:", err);
-
-        fs.writeFileSync(DB, "[]");
-
-        return [];
-    }
-}
-
-function writeDB(data) {
-    fs.writeFileSync(DB, JSON.stringify(data, null, 2));
-}
+const Member = mongoose.model(
+    "Member",
+    MemberSchema
+);
 
 // ===== ПОЛУЧИТЬ ВСЕХ =====
 
-app.get("/admin/get-members", (req, res) => {
+app.get("/admin/get-members", async (req, res) => {
 
-    const members = readDB();
+    try {
 
-    res.json(members);
+        const members = await Member.find();
+
+        res.json(members);
+
+    } catch(err) {
+
+        console.log(err);
+
+        res.status(500).send("SERVER ERROR");
+    }
 });
 
 // ===== СОХРАНИТЬ =====
 
-app.post("/admin/update-member", (req, res) => {
+app.post("/admin/update-member", async (req, res) => {
 
-  const {
-    password,
-    name,
-    rank,
-    warns,
-    online,
-    avatar
-} = req.body;
+    try {
 
-    if (password !== "admin123") {
-        return res.status(403).send("wrong password");
+        const {
+            password,
+            name,
+            rank,
+            warns,
+            online,
+            avatar,
+            gallery
+        } = req.body;
+
+        if (password !== "05060403") {
+
+            return res
+            .status(403)
+            .send("wrong password");
+        }
+
+        let existing = await Member.findOne({
+            name
+        });
+
+        if (existing) {
+
+            existing.rank = rank;
+            existing.warns = warns;
+            existing.online = online;
+            existing.avatar = avatar;
+
+            // ГАЛЕРЕЯ
+            existing.gallery = gallery || [];
+
+            await existing.save();
+
+        } else {
+
+            await Member.create({
+
+                name,
+                rank,
+                warns,
+                online,
+                avatar,
+
+                // ГАЛЕРЕЯ
+                gallery: gallery || []
+
+            });
+        }
+
+        res.sendStatus(200);
+
+    } catch(err) {
+
+        console.log(err);
+
+        res.status(500).send("SERVER ERROR");
     }
-
-    let members = readDB();
-
-    let existing = members.find(
-        m => m.name === name
-    );
-
-    if (existing) {
-
-    existing.rank = rank;
-    existing.warns = warns;
-    existing.online = online;
-    existing.avatar = avatar;
-
-    } else {
-
-        members.push({
-    name,
-    rank,
-    warns,
-    online,
-    avatar
-});
-    }
-
-    writeDB(members);
-
-    res.sendStatus(200);
 });
 
 // ===== ВЫГОВОРЫ =====
 
-app.post("/admin/update-warns", (req, res) => {
+app.post("/admin/update-warns", async (req, res) => {
 
-    const {
-        password,
-        name,
-        delta
-    } = req.body;
+    try {
 
-    if (password !== "admin123") {
-        return res.status(403).send("wrong password");
+        const {
+            password,
+            name,
+            delta
+        } = req.body;
+
+        if (password !== "05060403") {
+
+            return res
+            .status(403)
+            .send("wrong password");
+        }
+
+        let user = await Member.findOne({
+            name
+        });
+
+        if (!user) {
+
+            return res.sendStatus(404);
+        }
+
+        if (!user.warns) {
+
+            user.warns = 0;
+        }
+
+        user.warns += delta;
+
+        if (user.warns < 0) {
+
+            user.warns = 0;
+        }
+
+        await user.save();
+
+        res.sendStatus(200);
+
+    } catch(err) {
+
+        console.log(err);
+
+        res.status(500).send("SERVER ERROR");
     }
-
-    let members = readDB();
-
-    let user = members.find(
-        m => m.name === name
-    );
-
-    if (!user) {
-        return res.sendStatus(404);
-    }
-
-    if (!user.warns) {
-        user.warns = 0;
-    }
-
-    user.warns += delta;
-
-    if (user.warns < 0) {
-        user.warns = 0;
-    }
-
-    writeDB(members);
-
-    res.sendStatus(200);
 });
 
-// ===== УДАЛЕНИЕ =====
+// ===== УДАЛЕНИЕ ЮЗЕРА =====
 
-app.post("/admin/delete-member", (req, res) => {
+app.post("/admin/delete-member", async (req, res) => {
 
-    const {
-        password,
-        name
-    } = req.body;
+    try {
 
-    if (password !== "admin123") {
-        return res.status(403).send("wrong password");
+        const {
+            password,
+            name
+        } = req.body;
+
+        if (password !== "05060403") {
+
+            return res
+            .status(403)
+            .send("wrong password");
+        }
+
+        await Member.deleteOne({
+            name
+        });
+
+        res.sendStatus(200);
+
+    } catch(err) {
+
+        console.log(err);
+
+        res.status(500).send("SERVER ERROR");
     }
-
-    let members = readDB();
-
-    members = members.filter(
-        m => m.name !== name
-    );
-
-    writeDB(members);
-
-    res.sendStatus(200);
 });
+
+// ===== УДАЛЕНИЕ ФОТО =====
+
+app.post("/admin/delete-gallery-image", async (req, res) => {
+
+    try {
+
+        const {
+            password,
+            name,
+            index
+        } = req.body;
+
+        if (password !== "05060403") {
+
+            return res
+            .status(403)
+            .send("wrong password");
+        }
+
+        let user = await Member.findOne({
+            name
+        });
+
+        if (!user) {
+
+            return res.sendStatus(404);
+        }
+
+        if (!user.gallery) {
+
+            user.gallery = [];
+        }
+
+        user.gallery.splice(index, 1);
+
+        await user.save();
+
+        res.sendStatus(200);
+
+    } catch(err) {
+
+        console.log(err);
+
+        res.status(500).send("SERVER ERROR");
+    }
+});
+
+// ===== START =====
 
 app.listen(process.env.PORT || 3000, () => {
+
     console.log("SERVER STARTED");
+
 });
