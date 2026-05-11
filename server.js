@@ -17,16 +17,28 @@ app.use(express.static(__dirname));
 
 // ===== MONGODB =====
 
+mongoose.set('strictQuery', false);
 
 mongoose.connect(
-"mongodb+srv://dmin:05060403@cluster0.rnxra9s.mongodb.net/ekakamov?retryWrites=true&w=majority&appName=Cluster0"
+    "mongodb+srv://dmin:05060403@cluster0.rnxra9s.mongodb.net/ekakamov?retryWrites=true&w=majority&appName=Cluster0",
+    {
+        useNewUrlParser: true,
+        useUnifiedTopology: true
+    }
 )
 
 .then(() => {
 
     console.log("MONGO CONNECTED");
 
+    app.listen(process.env.PORT || 3000, () => {
+
+        console.log("SERVER STARTED");
+
+    });
+
 })
+
 .catch(err => {
 
     console.log("MONGO ERROR:", err);
@@ -388,10 +400,3 @@ app.post("/login", async (req, res) => {
     }
 });
 
-// ===== START =====
-
-app.listen(process.env.PORT || 3000, () => {
-
-    console.log("SERVER STARTED");
-
-});
