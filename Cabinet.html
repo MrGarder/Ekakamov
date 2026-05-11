@@ -723,20 +723,6 @@ let level = 1;
 let taskStatus = {};
 let activityData = [0,0,0,0,0,0,0];
 
-// ===== РАНГИ =====
-const rankNames = {
-    1: "[1] Кандидат",
-    2: "[2] Равк",
-    3: "[3] Новичок+",
-    4: "[4] Боец",
-    5: "[5] Ветеран",
-    6: "[6] Элит",
-    7: "[7] Шерх",
-    8: "[8] Гольд",
-    9: "[9] Зам. Главы",
-    10: "[10] Глава",
-    11: "[--] Разработчик"
-};
 
 // ===== ПРОФИЛЬ =====
 function loadProfile(user) {
@@ -749,13 +735,16 @@ function loadProfile(user) {
     `;
 
     // РАНГ
-    el('userRank').innerHTML = `
-        <span style="color:#777;"></span>
-        <span class="rank-badge rank-${user.rank}">
-            ${rankNames[user.rank] || "Без ранга"}
-        </span>
-    `;
+el('userRank').innerHTML = `
+    <span style="color:#777;"></span>
 
+    <span class="
+        rank-badge
+        ${getRankClass(user.rank)}
+    ">
+        ${user.rank || "Без ранга"}
+    </span>
+`;
     // ОТДЕЛ
     el('userDept').innerHTML = `
         <span style="color:#777;"></span>
@@ -976,14 +965,21 @@ function completeTask(i) {
     currentTaskIndex = i;
         
     const current = localStorage.getItem("currentUser");
-    let user = JSON.parse(localStorage.getItem("user_" + current));
+
+    let user = JSON.parse(
+        localStorage.getItem("user_" + current)
+    );
 
     const task = tasksByLevel[level][i];
 
     document.getElementById("modalName").innerText = user.name;
-    document.getElementById("modalRank").innerText = rankNames[user.rank];
+
+    document.getElementById("modalRank").innerText = user.rank;
+
     document.getElementById("modalPos").innerText = user.position;
+
     document.getElementById("modalDept").innerText = user.department;
+
     document.getElementById("modalTask").innerText = "✅ " + task;
 
     document.getElementById("taskModal").style.display = "flex";
@@ -1058,7 +1054,7 @@ async function sendTaskToTelegram() {
 📋 ОТЧЁТ О ЗАДАНИИ
 
 👤 Имя: ${user.name}
-🎖 Ранг: ${rankNames[user.rank]}
+🎖 Ранг: ${user.rank}
 💼 Должность: ${user.position}
 🏢 Отдел: ${user.department}
 
