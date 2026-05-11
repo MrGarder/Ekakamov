@@ -723,6 +723,52 @@ let level = 1;
 let taskStatus = {};
 let activityData = [0,0,0,0,0,0,0];
 
+function getRankClass(rank){
+
+    if(!rank) return "rank-1";
+
+    if(rank.includes("[11]")){
+        return "rank-11";
+    }
+
+    if(rank.includes("[10]")){
+        return "rank-10";
+    }
+
+    if(rank.includes("[9]")){
+        return "rank-9";
+    }
+
+    if(rank.includes("[8]")){
+        return "rank-8";
+    }
+
+    if(rank.includes("[7]")){
+        return "rank-7";
+    }
+
+    if(rank.includes("[6]")){
+        return "rank-6";
+    }
+
+    if(rank.includes("[5]")){
+        return "rank-5";
+    }
+
+    if(rank.includes("[4]")){
+        return "rank-4";
+    }
+
+    if(rank.includes("[3]")){
+        return "rank-3";
+    }
+
+    if(rank.includes("[2]")){
+        return "rank-2";
+    }
+
+    return "rank-1";
+}
 
 // ===== ПРОФИЛЬ =====
 function loadProfile(user) {
