@@ -19,7 +19,7 @@ app.use(express.static(__dirname));
 
 
 mongoose.connect(
-"mongodb+srv://admin:05060403@cluster0.rnxra9s.mongodb.net/ekakamov?retryWrites=true&w=majority&appName=Cluster0"
+"mongodb+srv://dmin:05060403@cluster0.rnxra9s.mongodb.net/ekakamov?retryWrites=true&w=majority&appName=Cluster0"
 )
 
 .then(() => {
