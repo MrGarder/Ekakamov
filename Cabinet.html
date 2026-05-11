@@ -567,52 +567,140 @@ function showReg() {
 }
 
 // ===== РЕГИСТРАЦИЯ =====
-function register() {
+async function register() {
+
     const name = el('regName').value.trim();
+
     const password = el('regPass').value.trim();
 
-    if (!name || !password) return alert("Заполни всё");
+    if (!name || !password) {
 
-    if (localStorage.getItem("user_" + name)) {
-        return alert("Пользователь уже есть");
+        return alert("Заполни всё");
     }
 
-    const user = {
-        name,
-        password,
-         rank: 1,
-        department: "Без отдела",
-        position: "Участник",
-        warns: 0,
-        xp: 0,
-        level: 1,
-        taskStatus: {},
-        activityData: [0,0,0,0,0,0,0],
-        avatar: "",
-        gallery: []
-    };
+    try {
 
-    localStorage.setItem("user_" + name, JSON.stringify(user));
-    localStorage.setItem("currentUser", name);
+        const res = await fetch('/register', {
 
-    startSession(user);
+            method: 'POST',
+
+            headers: {
+                'Content-Type': 'application/json'
+            },
+
+            body: JSON.stringify({
+
+                name,
+                password
+            })
+        });
+
+        if (!res.ok) {
+
+            const text = await res.text();
+
+            return alert(text);
+        }
+
+        // СОЗДАЁМ ОБЪЕКТ
+        const user = {
+
+            name,
+            password,
+
+            rank: "[1] Кандидат",
+
+            department: "Без отдела",
+
+            position: "Участник",
+
+            warns: 0,
+
+            xp: 0,
+
+            level: 1,
+
+            taskStatus: {},
+
+            activityData: [0,0,0,0,0,0,0],
+
+            avatar: "",
+
+            gallery: []
+        };
+
+        // СОХРАНЯЕМ ТЕКУЩУЮ СЕССИЮ
+        localStorage.setItem(
+            "currentUser",
+            name
+        );
+
+        // КЕШ ДЛЯ КАБИНЕТА
+        localStorage.setItem(
+            "user_" + name,
+            JSON.stringify(user)
+        );
+
+        startSession(user);
+
+    } catch(err) {
+
+        console.log(err);
+
+        alert("Ошибка сервера");
+    }
 }
 
 
-
 // ===== ЛОГИН =====
-function login() {
+async function login() {
+
     const name = el('logName').value.trim();
+
     const password = el('logPass').value.trim();
 
-    const user = JSON.parse(localStorage.getItem("user_" + name));
+    try {
 
-    if (!user) return alert("Нет такого аккаунта");
-    if (user.password !== password) return alert("Неверный пароль");
+        const res = await fetch('/login', {
 
-    localStorage.setItem("currentUser", name);
+            method: 'POST',
 
-    startSession(user);
+            headers: {
+                'Content-Type': 'application/json'
+            },
+
+            body: JSON.stringify({
+
+                name,
+                password
+            })
+        });
+
+        if (!res.ok) {
+
+            return alert("Неверный логин или пароль");
+        }
+
+        const user = await res.json();
+
+        localStorage.setItem(
+            "currentUser",
+            user.name
+        );
+
+        localStorage.setItem(
+            "user_" + user.name,
+            JSON.stringify(user)
+        );
+
+        startSession(user);
+
+    } catch(err) {
+
+        console.log(err);
+
+        alert("Ошибка сервера");
+    }
 }
 
 // ===== СТАРТ =====
@@ -731,19 +819,48 @@ function openAdminPanel() {
     window.location.href = "admin.html";
 }
 // ===== СОХРАНЕНИЕ =====
-function saveUser() {
+async function saveUser() {
+
     const current = localStorage.getItem("currentUser");
+
     if (!current) return;
 
-    let user = JSON.parse(localStorage.getItem("user_" + current));
+    let user = JSON.parse(
+        localStorage.getItem("user_" + current)
+    );
+
     if (!user) return;
 
+    // ОБНОВЛЯЕМ ДАННЫЕ
     user.xp = xp;
     user.level = level;
     user.taskStatus = taskStatus;
     user.activityData = activityData;
 
-    localStorage.setItem("user_" + current, JSON.stringify(user));
+    // ЛОКАЛЬНО
+    localStorage.setItem(
+        "user_" + current,
+        JSON.stringify(user)
+    );
+
+    try {
+
+        // ОТПРАВКА НА СЕРВЕР
+        await fetch('/save-profile', {
+
+            method: 'POST',
+
+            headers: {
+                'Content-Type': 'application/json'
+            },
+
+            body: JSON.stringify(user)
+        });
+
+    } catch(err) {
+
+        console.log(err);
+    }
 }
 
 // ===== XP =====
@@ -1136,21 +1253,53 @@ function uploadImages(event) {
     Array.from(files).forEach(file => {
 
         // ПРОВЕРКА
-        if (!file.type.startsWith("image/")) return;
+      reader.onload = async function(e) {
 
-        const reader = new FileReader();
+    user.gallery.push(e.target.result);
 
-        reader.onload = function(e) {
+    localStorage.setItem(
+        "user_" + current,
+        JSON.stringify(user)
+    );
 
-            user.gallery.push(e.target.result);
+    await fetch(
+        "/admin/update-member",
+        {
+            method: "POST",
 
-            localStorage.setItem(
-                "user_" + current,
-                JSON.stringify(user)
-            );
+            headers: {
+                "Content-Type": "application/json"
+            },
 
-            renderGallery();
-        };
+            body: JSON.stringify({
+
+                password: "05060403",
+
+                name: user.name,
+
+                rank: user.rank,
+
+                warns: user.warns,
+
+                online: user.online,
+
+                avatar: user.avatar,
+
+                gallery: user.gallery,
+
+                department: user.department,
+
+                position: user.position,
+
+                xp: user.xp,
+
+                level: user.level
+            })
+        }
+    );
+
+    renderGallery();
+};
 
         reader.readAsDataURL(file);
     });
@@ -1337,15 +1486,39 @@ function logout() {
 }
 
 // ===== АВТОЛОГИН =====
-window.onload = () => {
-    const current = localStorage.getItem("currentUser");
+window.onload = async () => {
 
-    if (current) {
-        const user = JSON.parse(localStorage.getItem("user_" + current));
+    const current =
+        localStorage.getItem("currentUser");
 
-        if (user) {
-            startSession(user);
-        }
+    if (!current) return;
+
+    try {
+
+        const res = await fetch(
+            "/admin/get-members"
+        );
+
+        const users = await res.json();
+
+        const user = users.find(
+            u => u.name === current
+        );
+
+        if (!user) return;
+
+        localStorage.setItem(
+            "user_" + current,
+            JSON.stringify(user)
+        );
+
+        startSession(user);
+
+    } catch(err) {
+
+        console.log(err);
+
+        alert("Ошибка загрузки");
     }
 };
 
