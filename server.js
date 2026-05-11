@@ -41,7 +41,8 @@ const MemberSchema = new mongoose.Schema({
 
     password: String,
 
-    rank: Number,
+    // РАНГ ТЕПЕРЬ СТРОКА
+    rank: String,
 
     warns: Number,
 
@@ -65,7 +66,6 @@ const Member = mongoose.model(
     "Member",
     MemberSchema
 );
-
 // ===== ПОЛУЧИТЬ ВСЕХ =====
 
 app.get("/admin/get-members", async (req, res) => {
