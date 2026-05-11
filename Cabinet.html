@@ -1,1282 +1,276 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>EKAKAMOV | CONTROL HUB</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-:root { --accent: #ff0000; --bg: #050505; --card: #0a0a0a; }
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
 
-body {
-    background: var(--bg);
-    color: #fff;
-    font-family: 'Segoe UI', sans-serif;
-    margin: 0;
-    padding: 20px;
-}
+const app = express();
 
-/* ШИРЕ СДЕЛАЛ */
-.main-grid {
-    display: grid;
-    grid-template-columns: 400px 1fr;
-    gap: 20px;
-    max-width: 1400px;
-    margin: 0 auto;
-}
+// ===== MIDDLEWARE =====
 
-.glass-card {
-    background: var(--card);
-    border: 1px solid #222;
-    padding: 20px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-}
+app.use(cors());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({
+    extended: true,
+    limit: "50mb"
+}));
 
-/* АВАТАР ФИКС */
-.avatar-box {
-    width: 100px;
-    height: 100px;
-    border: 2px solid var(--accent);
-    border-radius: 50%;
-    overflow: hidden;
-    margin: 0 auto;
-}
+app.use(express.static(__dirname));
 
-.avatar-box img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center; /* ВОТ ЭТО ФИКСИТ УХОД ВВЕРХ */
-}
+// ===== MONGODB =====
 
-/* ЗАДАЧИ */
-.task-item {
-    background: #111;
-    padding: 12px;
-    border-left: 3px solid var(--accent);
-    margin-bottom: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
 
-/* ГАЛЕРЕЯ */
-.gallery-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
-    margin-top: 10px;
-}
+mongoose.connect(
+"mongodb+srv://admin:05060403@cluster0.rnxra9s.mongodb.net/ekakamov?retryWrites=true&w=majority&appName=Cluster0"
+)
 
-.gallery-item {
-    position: relative;
-    border: 2px solid #222;
-    border-radius: 8px;
-    overflow: hidden;
-    transition: 0.2s;
+.then(() => {
 
-    height: 120px; /* ВОТ ФИКС */
-}
+    console.log("MONGO CONNECTED");
 
-.gallery-item:hover {
-    border-color: var(--accent);
-    transform: scale(1.03);
-}
+})
+.catch(err => {
 
-.gallery-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block; /* ВАЖНО */
-}
+    console.log("MONGO ERROR:", err);
 
-.auth-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: #000; z-index:9999; display:flex; justify-content:center; align-items:center; }
-.auth-box { width: 300px; padding: 20px; border: 1px solid var(--accent); border-radius: 8px; text-align: center; background: #0a0a0a; }
-.auth-box input { width: 100%; padding: 10px; margin: 10px 0; background: #111; border: 1px solid #333; color: white; box-sizing: border-box; }
-.auth-btn { width: 100%; padding: 10px; background: var(--accent); border: none; color: white; cursor: pointer; font-weight: bold; }
-.auth-link { cursor:pointer; color:#555; font-size: 12px; margin-top: 10px; }
-
-.profile-info {
-    margin-top: 10px;
-}
-
-.info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 12px;
-    margin-bottom: 8px;
-    background: #0f0f0f;
-    border: 1px solid #1a1a1a;
-    border-radius: 6px;
-    transition: 0.2s;
-}
-
-.info-row:hover {
-    border-color: var(--accent);
-    background: #111;
-}
-
-.info-label {
-    color: #888;
-    font-size: 12px;
-}
-
-.info-val {
-    font-weight: bold;
-    color: #fff;
-}
-/* ОБЩИЙ СТИЛЬ */
-.rank-badge{
-    padding:6px 12px;
-    border-radius:6px;
-    font-weight:bold;
-    font-size:11px;
-    text-transform:uppercase;
-    display:inline-block;
-    letter-spacing:1px;
-}
-
-/* РАНГИ */
-.rank-1{
-    background:#555;
-    color:#ccc;
-}
-
-.rank-2{
-    background:#888;
-    color:#000;
-}
-
-.rank-3{
-    background:#444;
-    color:#fff;
-}
-
-.rank-4{
-    background:#006400;
-    color:#fff;
-}
-
-.rank-5{
-    background:#00008b;
-    color:#fff;
-}
-
-.rank-6{
-    background:#4b0082;
-    color:#fff;
-}
-
-.rank-7{
-    background:#ffd700;
-    color:#000;
-}
-
-.rank-8{
-    background:#ff8c00;
-    color:#fff;
-}
-
-.rank-9{
-    background:#8b0000;
-    border:1px solid #ff0000;
-    color:#fff;
-}
-
-.rank-10{
-    background:#ff0000;
-    border:1px solid #fff;
-    box-shadow:0 0 15px rgba(255,0,0,0.5);
-    color:#fff;
-}
-
-.rank-11{
-    background:linear-gradient(45deg,#0206ff,#4400ff);
-    color:#000;
-    border:1px solid #fff;
-    box-shadow:0 0 20px rgba(255,255,255,0.8);
-}
-
-</style>
-</head>
-<body>
-<div class="auth-overlay" id="auth-container">
-    <div class="auth-box">
-
-        <div id="login-screen">
-            <h3>Вход</h3>
-            <input id="logName" placeholder="Имя">
-            <input id="logPass" placeholder="Пароль">
-            <button class="auth-btn" onclick="login()">Войти</button>
-            <div class="auth-link" onclick="showReg()">Регистрация</div>
-        </div>
-
-        <div id="reg-screen" style="display:none;">
-            <h3>Регистрация</h3>
-            <input id="regName" placeholder="Имя">
-            <input id="regPass" placeholder="Пароль">
-            <button class="auth-btn" onclick="register()">Создать</button>
-            <div class="auth-link" onclick="showLogin()">Назад</div>
-        </div>
-
-    </div>
-</div>
-<div id="main-content" style="display:none;">
-<div class="main-grid">
-    <div class="glass-card">
-        <div class="avatar-box">
-    <img id="avatar" src="https://i.imgur.com/example.jpg">
-</div>
-
-        <!-- НОВОЕ: загрузка аватара -->
-        <input type="file" accept="image/*" onchange="changeAvatar(event)">
-
-        <h2 id="userName" style="margin:15px 0;"></h2>
-
-<div class="profile-info">
-
-    <div class="info-row">
-        <span class="info-label">👤 Ваше имя</span>
-        <span class="info-val" id="userNameInfo"></span>
-    </div>
-
-    <div class="info-row">
-        <span class="info-label">🎖 Ранг</span>
-        <span class="info-val" id="userRank"></span>
-    </div>
-
-    <div class="info-row">
-        <span class="info-label">💼 Должность</span>
-        <span class="info-val" id="userPos"></span>
-    </div>
-
-    <div class="info-row">
-        <span class="info-label">🏢 Отдел</span>
-        <span class="info-val" id="userDept"></span>
-    </div>
-
-<div class="info-row">
-    <div class="info-label">ВЫГОВОР</div>
-
-    <div class="info-val" id="userWarn" style="
-        color:#ffaa00;
-        font-weight:bold;
-        margin-top:4px;
-    ">
-        0 / 3
-    </div>
-</div>
-<div id="adminButtonBox" style="display:none; margin-top:15px;">
-
-    <button onclick="openAdminPanel()" style="
-        width:100%;
-        padding:12px;
-        background:#111;
-        border:1px solid #ff0000;
-        color:#ff0000;
-        font-weight:bold;
-        cursor:pointer;
-        border-radius:6px;
-    ">
-        АДМИН ПАНЕЛЬ
-    </button>
-
-</div>
-</div>
-
-        <canvas id="miniRadar" style="margin: 20px 0;"></canvas>
-        <button onclick="logout()" style="width:100%; padding:10px; background:#400; border:1px solid var(--accent); color:#ff5555; cursor:pointer;">ВЫЙТИ ИЗ КАБИНЕТА</button>
-    </div>
-
-    <div>
-        <div class="glass-card" id="admin-panel">
-            <h3>Информация о фаме </h3>
-            
-                
-                
-                  
-         
-        </div>
-
-      
-    <div class="glass-card">
-   <h3>ОПЕРАТИВНЫЕ ЗАДАЧИ</h3>
-
-<div id="taskList"></div>
-
-      <div class="glass-card" style="margin-top:10px;">
-    <h3>ГАЛЕРЕЯ / ПАМЯТЬ</h3>
-
-    <input type="file" accept="image/*" multiple onchange="uploadImages(event)">
-
-    <div id="gallery" style="
-        display:grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap:8px;
-        margin-top:10px;
-    "></div>
-</div>
-<div class="glass-card">
-    <h3>📊 СТАТИСТИКА</h3>
-
-    <div style="display:flex; gap:10px;">
-        
-        <div style="flex:1; height:180px;">
-            <canvas id="activityChart"></canvas>
-        </div>
-
-        <div style="flex:1; height:180px;">
-            <canvas id="moneyChart"></canvas>
-        </div>
-
-    </div>
-
-    <div style="margin-top:10px;">
-        Выполнено задач: <b id="tasksDone">0</b>
-    </div>
-</div>
-<!-- XP СИСТЕМА -->
-<div class="glass-card" style="padding:12px;">
-    <h3 style="font-size:12px; margin-bottom:8px;">🧠 ПРОГРЕСС</h3>
-
-    <div style="display:flex; justify-content:space-between; font-size:11px;">
-        <div>LVL <b id="level">1</b></div>
-        <div><b id="xp">0</b> / <span id="xpNext">100</span> XP</div>
-    </div>
-
-    <div style="background:#111; height:8px; margin-top:8px; border-radius:4px; overflow:hidden;">
-        <div id="xpBar" style="
-            height:100%;
-            width:0%;
-            background: linear-gradient(90deg, #0f0, #00ff99);
-            transition: 0.3s;
-        "></div>
-    </div>
-</div>
-
-<!-- ДОСТИЖЕНИЯ -->
-<div class="glass-card">
-    <h3>🏆 ДОСТИЖЕНИЯ</h3>
-    <ul id="achievements"></ul>
-</div>
-
-<!-- НАГРАДЫ -->
-<div class="glass-card">
-    <h3>🎁 НАГРАДЫ</h3>
-    <ul id="rewards"></ul>
-</div>
-  
-  <!-- отправка в тг -->
-  <div id="taskModal" style="
-    display:none;
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.85);
-    justify-content:center;
-    align-items:center;
-    z-index:999999;
-">
-
-    <div style="
-        width:430px;
-        background:#0a0a0a;
-        border:1px solid #ff0000;
-        border-radius:10px;
-        padding:25px;
-        color:white;
-        font-family:Segoe UI;
-    ">
-
-        <h2 style="
-            margin-top:0;
-            color:#ff0000;
-            text-align:center;
-        ">
-            📋 СДАЧА ЗАДАНИЯ
-        </h2>
-
-        <div style="line-height:1.9; margin-top:20px;">
-
-            <div><span style="color:#777;">Имя:</span> <b id="modalName"></b></div>
-
-            <div><span style="color:#777;">Ранг:</span> <b id="modalRank"></b></div>
-
-            <div><span style="color:#777;">Должность:</span> <b id="modalPos"></b></div>
-
-            <div><span style="color:#777;">Отдел:</span> <b id="modalDept"></b></div>
-
-            <div id="modalTask" style="
-                margin-top:15px;
-                background:#111;
-                padding:12px;
-                border-left:3px solid #ff0000;
-                border-radius:4px;
-            ">
-            </div>
-
-        </div>
-
-       <input 
-        id="taskFile"
-        type="file"
-        accept="image/*,video/*"
-        multiple
-        style="
-        margin-top:20px;
-        width:100%;
-        background:#111;
-        color:white;
-        padding:10px;
-        border:1px solid #333;
-    "
->
-<div style="
-    display:flex;
-    gap:10px;
-    margin-top:15px;
-">
-
-    <button
-        id="sendTaskBtn"
-        onclick="sendTaskToTelegram()"
-        style="
-            flex:1;
-            padding:12px;
-            background:#111;
-            border:1px solid #ff0000;
-            color:#ff0000;
-            font-weight:bold;
-            cursor:pointer;
-            border-radius:6px;
-            transition:0.15s;
-        "
-
-        onmouseover="
-            this.style.background='#ff0000';
-            this.style.color='white';
-        "
-
-        onmouseout="
-            this.style.background='#111';
-            this.style.color='#ff0000';
-        "
-    >
-        ОТПРАВИТЬ
-    </button>
-
-    <button
-        onclick="closeTaskModal()"
-        style="
-            flex:1;
-            padding:12px;
-            background:#111;
-            border:1px solid #333;
-            color:#aaa;
-            font-weight:bold;
-            cursor:pointer;
-            border-radius:6px;
-            transition:0.15s;
-        "
-
-        onmouseover="
-            this.style.borderColor='#666';
-            this.style.color='white';
-        "
-
-        onmouseout="
-            this.style.borderColor='#333';
-            this.style.color='#aaa';
-        "
-    >
-        ЗАКРЫТЬ
-    </button>
-
-</div>
-
-        </div>
-
-    </div>
-
-</div>
-<script> 
-  const TG_TOKEN = "7922162882:AAFvx7yUn3sS-hkA6CwzSh1rcPFxPcSm71E"; 
-        const CHAT_IDS = ["2018168530", "8274600686"];
-// ===== БЫСТРЫЕ ССЫЛКИ =====
-const el = (id) => document.getElementById(id);
-
-// ===== СДЕЛАТЬ ЧУТЬ ШИРЕ =====
-document.addEventListener("DOMContentLoaded", () => {
-    const grid = document.querySelector('.main-grid');
-    if (grid) {
-        grid.style.maxWidth = "1400px";
-    }
 });
 
-// UI
-function showLogin() {
-    el('reg-screen').style.display = 'none';
-    el('login-screen').style.display = 'block';
-}
+// ===== SCHEMA =====
 
-function showReg() {
-    el('reg-screen').style.display = 'block';
-    el('login-screen').style.display = 'none';
-}
+const MemberSchema = new mongoose.Schema({
 
-// ===== РЕГИСТРАЦИЯ =====
-function register() {
-    const name = el('regName').value.trim();
-    const password = el('regPass').value.trim();
+    name: String,
+    rank: String,
+    warns: Number,
+    online: Boolean,
+    avatar: String,
 
-    if (!name || !password) return alert("Заполни всё");
+    // ГАЛЕРЕЯ
+    gallery: [String]
 
-    if (localStorage.getItem("user_" + name)) {
-        return alert("Пользователь уже есть");
-    }
+});
 
-   const user = {
-    name,
-    password,
-    rank: "[1] Кандидат",
-    department: "Без отдела",
-    position: "Участник",
-    warns: 0,
-    xp: 0,
-    level: 1,
-    taskStatus: {},
-    activityData: [0,0,0,0,0,0,0],
-    avatar: "",
-    gallery: []
-};
+const Member = mongoose.model(
+    "Member",
+    MemberSchema
+);
 
-    localStorage.setItem("user_" + name, JSON.stringify(user));
-    localStorage.setItem("currentUser", name);
+// ===== ПОЛУЧИТЬ ВСЕХ =====
 
-    startSession(user);
-}
-
-
-
-// ===== ЛОГИН =====
-function login() {
-    const name = el('logName').value.trim();
-    const password = el('logPass').value.trim();
-
-    const user = JSON.parse(localStorage.getItem("user_" + name));
-
-    if (!user) return alert("Нет такого аккаунта");
-    if (user.password !== password) return alert("Неверный пароль");
-
-    localStorage.setItem("currentUser", name);
-
-    startSession(user);
-}
-
-// ===== СТАРТ =====
-function startSession(user) {
-    loadProfile(user);
-
-    el('auth-container').style.display = 'none';
-    el('main-content').style.display = 'grid';
-
-    setTimeout(() => {
-        initCharts();
-        renderTasks();
-        renderGallery();
-    }, 100);
-}
-
-// ===== ДАННЫЕ =====
-let xp = 0;
-let level = 1;
-let taskStatus = {};
-let activityData = [0,0,0,0,0,0,0];
-
-// ===== РАНГИ =====
-const rankNames = {
-    1: "[1] Кандидат",
-    2: "[2] Равк",
-    3: "[3] Новичок+",
-    4: "[4] Боец",
-    5: "[5] Ветеран",
-    6: "[6] Элит",
-    7: "[7] Шерх",
-    8: "[8] Гольд",
-    9: "[9] Зам. Главы",
-    10: "[10] Глава",
-    11: "[--] Разработчик"
-};
-
-// ===== ПРОФИЛЬ =====
-function loadProfile(user) {
-    
-    localStorage.removeItem("viewProfile");
-    el('userName').innerText = user.name;
-
-    el('userNameInfo').innerHTML = `
-        <span style="color:#777;"></span>
-        <span style="color:white;"> ${user.name}</span>
-    `;
-
-   // РАНГ
-el('userRank').innerHTML = `
-    <span style="color:#777;"></span>
-
-    <span class="
-        rank-badge
-        ${getRankClass(user.rank)}
-    ">
-        ${user.rank || "Без ранга"}
-    </span>
-`;
-    // ОТДЕЛ
-    el('userDept').innerHTML = `
-        <span style="color:#777;"></span>
-        <span style="color:white;"> ${user.department}</span>
-    `;
-
-    // ДОЛЖНОСТЬ
-    el('userPos').innerHTML = `
-        <span style="color:#777;"></span>
-        <span style="color:white;"> ${user.position}</span>
-    `;
-
-    xp = user.xp || 0;
-    level = user.level || 1;
-    taskStatus = user.taskStatus || {};
-    activityData = user.activityData || [0,0,0,0,0,0,0];
-
-   el('userWarn').innerHTML = `
-    <span style="
-        color:${(user.warns || 0) >= 3 ? '#ff0000' : '#ffaa00'};
-        font-weight:bold;
-     ">
-        ${user.warns || 0} / 3
-    </span>
-`;
-
-    // АВАТАР
-    if (user.avatar && user.avatar !== "") {
-        el('avatar').src = user.avatar;
-    }
-
-    updateXP();
-}
-// ===== СТАРТ =====
-function startSession(user) {
-
-    loadProfile(user);
-
-    el('auth-container').style.display = 'none';
-    el('main-content').style.display = 'grid';
-
-    // ===== КНОПКА АДМИНКИ =====
-    if (
-
-        user.rank.includes("[9]") ||
-        user.rank.includes("[10]") ||
-        user.rank.includes("[11]")
-
-    ) {
-
-        const adminBox = el('adminButtonBox');
-
-        if (adminBox) {
-            adminBox.style.display = "block";
-        }
-    }
-
-    // ===== ЗАГРУЗКА ВСЕГО =====
-    setTimeout(() => {
-
-        initCharts();
-        renderTasks();
-        renderGallery();
-
-    }, 100);
-}
-
-// ===== ОТКРЫТЬ АДМИНКУ =====
-function openAdminPanel() {
-    window.location.href = "admin.html";
-}
-// ===== СОХРАНЕНИЕ =====
-function saveUser() {
-    const current = localStorage.getItem("currentUser");
-    if (!current) return;
-
-    let user = JSON.parse(localStorage.getItem("user_" + current));
-    if (!user) return;
-
-    user.xp = xp;
-    user.level = level;
-    user.taskStatus = taskStatus;
-    user.activityData = activityData;
-
-    localStorage.setItem("user_" + current, JSON.stringify(user));
-}
-
-// ===== XP =====
-function updateXP() {
-    let next = level * 100;
-
-    el('xpBar').style.width = (xp / next) * 100 + "%";
-    el('xp').innerText = xp;
-    el('level').innerText = level;
-    el('xpNext').innerText = next;
-
-    saveUser();
-}
-
-
-function getRankClass(rank){
-
-    if(rank.includes("[11]")){
-        return "rank-11";
-    }
-
-    if(rank.includes("[10]")){
-        return "rank-10";
-    }
-
-    if(rank.includes("[9]")){
-        return "rank-9";
-    }
-
-    if(rank.includes("[8]")){
-        return "rank-8";
-    }
-
-    if(rank.includes("[7]")){
-        return "rank-7";
-    }
-
-    if(rank.includes("[6]")){
-        return "rank-6";
-    }
-
-    if(rank.includes("[5]")){
-        return "rank-5";
-    }
-
-    if(rank.includes("[4]")){
-        return "rank-4";
-    }
-
-    if(rank.includes("[3]")){
-        return "rank-3";
-    }
-
-    if(rank.includes("[2]")){
-        return "rank-2";
-    }
-
-    return "rank-1";
-}
-const tasksByLevel = {
-
-    1: [
-        "Сдать устав",
-        "Познакомиться с составом",
-        "Прийти на сбор",
-        "Быть в сети 30 минут",
-        "Заполнить профиль"
-    ],
-
-    2: [
-        "Взнос 10к",
-        "Актив 1 час",
-        "Сделать отчёт",
-        "Посетить мероприятие",
-        "Помочь участнику"
-    ],
-
-    3: [
-        "Пригласить 1 человека",
-        "Участие в мероприятии",
-        "Быть в рации",
-        "Выполнить поручение",
-        "Собрать информацию"
-    ],
-
-    4: [
-        "Взнос 20к",
-        "2 часа актива",
-        "Помощь новичку",
-        "Присутствовать на сборе",
-        "Сделать скрин отчёт"
-    ],
-
-    5: [
-        "Пригласить 2 человек",
-        "Сделать отчёт",
-        "Выполнить поручение",
-        "Следить за дисциплиной",
-        "Помочь на тренировке"
-    ],
-
-    6: [
-        "Участие в рейде",
-        "3 часа актива",
-        "Собрать информацию",
-        "Контроль участников",
-        "Провести проверку"
-    ],
-
-    7: [
-        "Следить за составом",
-        "Провести тренировку",
-        "Сделать проверку",
-        "Контроль активности",
-        "Проверка отчётов"
-    ],
-
-    8: [
-        "Контроль участников",
-        "Помощь руководству",
-        "Организация сбора",
-        "Выдать задания",
-        "Проверить дисциплину"
-    ],
-
-    9: [
-        "Проверка отчётов",
-        "Контроль дисциплины",
-        "Управление составом",
-        "Провести собрание",
-        "Назначить ответственных"
-    ],
-
-    10: [
-        "Провести собеседование",
-        "Назначить задачи",
-        "Контроль отдела",
-        "Следить за активом",
-        "Решение конфликтов"
-    ],
-
-    11: [
-        "Полный контроль семьи",
-        "Управление администрацией",
-        "Следить за всеми отделами",
-        "Проверка руководства",
-        "Глобальный контроль проекта"
-    ]
-
-};
-
-// ===== отправка в тг =====
-
-let currentTaskIndex = null;
-
-function completeTask(i) {
-
-    currentTaskIndex = i;
-        
-    const current = localStorage.getItem("currentUser");
-    let user = JSON.parse(localStorage.getItem("user_" + current));
-
-    const task = tasksByLevel[level][i];
-
-    document.getElementById("modalName").innerText = user.name;
-    document.getElementById("modalRank").innerText = rankNames[user.rank];
-    document.getElementById("modalPos").innerText = user.position;
-    document.getElementById("modalDept").innerText = user.department;
-    document.getElementById("modalTask").innerText = "✅ " + task;
-
-    document.getElementById("taskModal").style.display = "flex";
-}
-
-function closeTaskModal() {
-    document.getElementById("taskModal").style.display = "none";
-}
-
-function renderTasks() {
-    const box = el('taskList');
-    if (!box) return;
-
-    box.innerHTML = "";
-
-    let list = tasksByLevel[level] || [];
-
-    list.forEach((task, i) => {
-        let status = taskStatus[level]?.[i];
-
-        let div = document.createElement('div');
-        div.className = "task-item";
-
-        if (status === "done") {
-            div.innerHTML = `${task} ✔`;
-        } else {
-            div.innerHTML = `${task} <button onclick="completeTask(${i})">Сдать</button>`;
-        }
-
-        box.appendChild(div);
-    });
-}
-
-async function sendTaskToTelegram() {
-
-    const btn = document.getElementById("sendTaskBtn");
-
-    btn.innerText = "ОТПРАВКА...";
-    btn.disabled = true;
-
-     btn.style.opacity = "0.6";
-     btn.style.borderColor = "#666";
-     btn.style.color = "#999";
-
-    const current = localStorage.getItem("currentUser");
-
-    const user = JSON.parse(
-        localStorage.getItem("user_" + current)
-    );
-
-    const task = tasksByLevel[level][currentTaskIndex];
-
-    const files = document.getElementById("taskFile").files;
-
-    if (files.length === 0) {
-
-        btn.innerText = "ОТПРАВИТЬ";
-        btn.disabled = false;
-
-        return alert("Выбери файлы");
-    }
-
-    if (files.length > 10) {
-
-        btn.innerText = "ОТПРАВИТЬ";
-        btn.disabled = false;
-
-        return alert("Максимум 10 файлов");
-    }
-
-    const text = `
-📋 ОТЧЁТ О ЗАДАНИИ
-
-👤 Имя: ${user.name}
-🎖 Ранг: ${rankNames[user.rank]}
-💼 Должность: ${user.position}
-🏢 Отдел: ${user.department}
-
-✅ Выполненное задание:
-${task}
-`;
+app.get("/admin/get-members", async (req, res) => {
 
     try {
 
-        for (let chatId of CHAT_IDS) {
+        const members = await Member.find();
 
-            const formData = new FormData();
-
-            formData.append("chat_id", chatId);
-
-            let media = [];
-
-            Array.from(files).forEach((file, index) => {
-
-                const fileName = "file" + index;
-
-                formData.append(fileName, file);
-
-                media.push({
-
-                    type: file.type.startsWith("video")
-                        ? "video"
-                        : "photo",
-
-                    media: "attach://" + fileName,
-
-                    caption: index === 0 ? text : ""
-
-                });
-            });
-
-            formData.append(
-                "media",
-                JSON.stringify(media)
-            );
-
-            const res = await fetch(
-                `https://api.telegram.org/bot${TG_TOKEN}/sendMediaGroup`,
-                {
-                    method: "POST",
-                    body: formData
-                }
-            );
-
-            const data = await res.json();
-
-            console.log(data);
-
-            if (!data.ok) {
-                throw new Error(data.description);
-            }
-        }
-
-        // ===== СОХРАНИТЬ =====
-        if (!taskStatus[level]) {
-            taskStatus[level] = {};
-        }
-
-        taskStatus[level][currentTaskIndex] = "done";
-
-        xp += 20;
-
-        updateXP();
-
-        saveUser();
-
-        renderTasks();
-
-        btn.innerText = "✓ ОТПРАВЛЕНО";
-
-         btn.style.background = "#0f0";
-         btn.style.borderColor = "#0f0";
-           btn.style.color = "#000";
-         btn.style.opacity = "1";
-        setTimeout(() => {
-
-          btn.innerText = "ОТПРАВИТЬ";
-
-btn.disabled = false;
-
-btn.style.background = "#111";
-btn.style.borderColor = "#ff0000";
-btn.style.color = "#ff0000";
-btn.style.opacity = "1";
-
-        }, 2000);
-
-        closeTaskModal();
+        res.json(members);
 
     } catch(err) {
 
         console.log(err);
 
-        btn.innerText = "ОШИБКА";
-        btn.disabled = false;
-
-        alert("Ошибка отправки");
+        res.status(500).send("SERVER ERROR");
     }
-}
+});
 
+// ===== СОХРАНИТЬ =====
 
-
-// ===== АВАТАР =====
-function changeAvatar(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-        const img = ev.target.result;
-        document.getElementById('avatar').src = img;
-
-        const current = localStorage.getItem("currentUser");
-        let user = JSON.parse(localStorage.getItem("user_" + current));
-        user.avatar = img;
-        localStorage.setItem("user_" + current, JSON.stringify(user));
-    };
-    reader.readAsDataURL(file);
-}
-// ===== ГАЛЕРЕЯ =====
-
-function uploadImages(event) {
-
-    const files = event.target.files;
-
-    if (!files.length) return;
-
-    const current = localStorage.getItem("currentUser");
-
-    if (!current) {
-        alert("Нет пользователя");
-        return;
-    }
-
-    let user = JSON.parse(localStorage.getItem("user_" + current));
-
-    if (!user.gallery) {
-        user.gallery = [];
-    }
-
-    Array.from(files).forEach(file => {
-
-        // ПРОВЕРКА
-        if (!file.type.startsWith("image/")) return;
-
-        const reader = new FileReader();
-
-        reader.onload = function(e) {
-
-            user.gallery.push(e.target.result);
-
-            localStorage.setItem(
-                "user_" + current,
-                JSON.stringify(user)
-            );
-
-            renderGallery();
-        };
-
-        reader.readAsDataURL(file);
-    });
-}
-
-function renderGallery() {
-
-    const gallery = document.getElementById("gallery");
-
-    if (!gallery) return;
-
-    const current = localStorage.getItem("currentUser");
-
-    if (!current) return;
-
-    let user = JSON.parse(localStorage.getItem("user_" + current));
-
-    gallery.innerHTML = "";
-
-    if (!user.gallery || user.gallery.length === 0) {
-        gallery.innerHTML = `
-            <div style="
-                color:#666;
-                font-size:12px;
-                grid-column:1/-1;
-                text-align:center;
-                padding:20px;
-            ">
-                Галерея пустая
-            </div>
-        `;
-        return;
-    }
-
-    user.gallery.forEach((img, index) => {
-
-        const item = document.createElement("div");
-
-        item.className = "gallery-item";
-
-        item.innerHTML = `
-            <img src="${img}" style="
-                width:100%;
-                height:120px;
-                object-fit:cover;
-                display:block;
-            ">
-
-            <button class="delete-btn"
-                onclick="deleteImage(${index})">
-                ✕
-            </button>
-        `;
-
-        gallery.appendChild(item);
-    });
-}
-
-function deleteImage(index) {
-
-    const current = localStorage.getItem("currentUser");
-
-    let user = JSON.parse(localStorage.getItem("user_" + current));
-
-    user.gallery.splice(index, 1);
-
-    localStorage.setItem(
-        "user_" + current,
-        JSON.stringify(user)
-    );
-
-    renderGallery();
-}
-// ===== ГРАФИК =====
-let activityChart;
-
-function initCharts() {
-    const ctx = el('activityChart');
-    if (!ctx) return;
-
-    activityChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
-            datasets: [{
-                data: activityData,
-                borderColor: '#ff0000',
-                backgroundColor: 'rgba(255,0,0,0.1)',
-                fill: true
-            }]
-        }
-    });
-}
-
-// ===== ВЫХОД =====
-function logout() {
-    localStorage.removeItem("currentUser");
-    location.reload();
-}
-
-// ===== АВТОЛОГИН =====
-window.onload = async () => {
-
-    const current =
-        localStorage.getItem("viewProfile")
-        || localStorage.getItem("currentUser");
-
-    if (!current) return;
-
-    let user = JSON.parse(
-        localStorage.getItem("user_" + current)
-    );
-
-    if (!user) return;
+app.post("/admin/update-member", async (req, res) => {
 
     try {
 
-        // БЕРЁМ ДАННЫЕ ИЗ АДМИНКИ
-        const res = await fetch('/admin/get-members');
+        const {
+            password,
+            name,
+            rank,
+            warns,
+            online,
+            avatar,
+            gallery
+        } = req.body;
 
-        const members = await res.json();
+        if (password !== "05060403") {
 
-        const member = members.find(
-            m => m.name === current
-        );
+            return res
+            .status(403)
+            .send("wrong password");
+        }
 
-        // ЕСЛИ НАШЛИ
-        if(member){
+        let existing = await Member.findOne({
+            name
+        });
 
-    user.rank = member.rank;
-    user.warns = member.warns;
-    user.online = member.online;
+        if (existing) {
 
-    // АВАТАР С СЕРВЕРА
-    user.avatar = member.avatar || user.avatar;
+            existing.rank = rank;
+            existing.warns = warns;
+            existing.online = online;
+            existing.avatar = avatar;
 
-    localStorage.setItem(
-        "user_" + current,
-        JSON.stringify(user)
-    );
-}
+            // ГАЛЕРЕЯ
+            existing.gallery = gallery || [];
 
-    } catch(err){
+            await existing.save();
+
+        } else {
+
+            await Member.create({
+
+                name,
+                rank,
+                warns,
+                online,
+                avatar,
+
+                // ГАЛЕРЕЯ
+                gallery: gallery || []
+
+            });
+        }
+
+        res.sendStatus(200);
+
+    } catch(err) {
 
         console.log(err);
+
+        res.status(500).send("SERVER ERROR");
     }
+});
 
-    startSession(user);
+// ===== ВЫГОВОРЫ =====
 
-    localStorage.removeItem("viewProfile");
-};
-</script>
-</div>
-</div>
-</body>
-</html>
+app.post("/admin/update-warns", async (req, res) => {
+
+    try {
+
+        const {
+            password,
+            name,
+            delta
+        } = req.body;
+
+        if (password !== "05060403") {
+
+            return res
+            .status(403)
+            .send("wrong password");
+        }
+
+        let user = await Member.findOne({
+            name
+        });
+
+        if (!user) {
+
+            return res.sendStatus(404);
+        }
+
+        if (!user.warns) {
+
+            user.warns = 0;
+        }
+
+        user.warns += delta;
+
+        if (user.warns < 0) {
+
+            user.warns = 0;
+        }
+
+        await user.save();
+
+        res.sendStatus(200);
+
+    } catch(err) {
+
+        console.log(err);
+
+        res.status(500).send("SERVER ERROR");
+    }
+});
+
+// ===== УДАЛЕНИЕ ЮЗЕРА =====
+
+app.post("/admin/delete-member", async (req, res) => {
+
+    try {
+
+        const {
+            password,
+            name
+        } = req.body;
+
+        if (password !== "05060403") {
+
+            return res
+            .status(403)
+            .send("wrong password");
+        }
+
+        await Member.deleteOne({
+            name
+        });
+
+        res.sendStatus(200);
+
+    } catch(err) {
+
+        console.log(err);
+
+        res.status(500).send("SERVER ERROR");
+    }
+});
+
+// ===== УДАЛЕНИЕ ФОТО =====
+
+app.post("/admin/delete-gallery-image", async (req, res) => {
+
+    try {
+
+        const {
+            password,
+            name,
+            index
+        } = req.body;
+
+        if (password !== "05060403") {
+
+            return res
+            .status(403)
+            .send("wrong password");
+        }
+
+        let user = await Member.findOne({
+            name
+        });
+
+        if (!user) {
+
+            return res.sendStatus(404);
+        }
+
+        if (!user.gallery) {
+
+            user.gallery = [];
+        }
+
+        user.gallery.splice(index, 1);
+
+        await user.save();
+
+        res.sendStatus(200);
+
+    } catch(err) {
+
+        console.log(err);
+
+        res.status(500).send("SERVER ERROR");
+    }
+});
+
+// ===== START =====
+
+app.listen(process.env.PORT || 3000, () => {
+
+    console.log("SERVER STARTED");
+
+});
