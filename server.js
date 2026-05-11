@@ -19,7 +19,7 @@ app.use(express.static(__dirname));
 
 
 mongoose.connect(
-"mongodb+srv://dmin:05060403@cluster0.rnxra9s.mongodb.net/ekakamov?retryWrites=true&w=majority&appName=Cluster0"
+"mongodb+srv://admin:05060403@cluster0.rnxra9s.mongodb.net/ekakamov?retryWrites=true&w=majority&appName=Cluster0"
 )
 
 .then(() => {
@@ -282,6 +282,103 @@ app.post("/admin/delete-gallery-image", async (req, res) => {
         await user.save();
 
         res.sendStatus(200);
+
+    } catch(err) {
+
+        console.log(err);
+
+        res.status(500).send("SERVER ERROR");
+    }
+});
+
+
+
+app.post("/register", async (req, res) => {
+
+    try {
+
+        const {
+
+            name,
+            password
+
+        } = req.body;
+
+        let exists = await Member.findOne({
+            name
+        });
+
+        if (exists) {
+
+            return res
+            .status(400)
+            .send("USER EXISTS");
+        }
+
+        await Member.create({
+
+            name,
+            password,
+
+            rank: "[1] Кандидат",
+
+            warns: 0,
+
+            online: true,
+
+            avatar: "",
+
+            gallery: [],
+
+            department: "Без отдела",
+
+            position: "Участник",
+
+            xp: 0,
+
+            level: 1
+        });
+
+        res.sendStatus(200);
+
+    } catch(err) {
+
+        console.log(err);
+
+        res.status(500).send("SERVER ERROR");
+    }
+});
+
+app.post("/login", async (req, res) => {
+
+    try {
+
+        const {
+
+            name,
+            password
+
+        } = req.body;
+
+        const user = await Member.findOne({
+            name
+        });
+
+        if (!user) {
+
+            return res
+            .status(404)
+            .send("USER NOT FOUND");
+        }
+
+        if (user.password !== password) {
+
+            return res
+            .status(403)
+            .send("WRONG PASSWORD");
+        }
+
+        res.json(user);
 
     } catch(err) {
 
