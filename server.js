@@ -38,13 +38,26 @@ mongoose.connect(
 const MemberSchema = new mongoose.Schema({
 
     name: String,
-    rank: String,
+
+    password: String,
+
+    rank: Number,
+
     warns: Number,
+
     online: Boolean,
+
     avatar: String,
 
-    // ГАЛЕРЕЯ
-    gallery: [String]
+    gallery: [String],
+
+    department: String,
+
+    position: String,
+
+    xp: Number,
+
+    level: Number
 
 });
 
@@ -77,15 +90,19 @@ app.post("/admin/update-member", async (req, res) => {
 
     try {
 
-        const {
-            password,
-            name,
-            rank,
-            warns,
-            online,
-            avatar,
-            gallery
-        } = req.body;
+       const {
+    password,
+    name,
+    rank,
+    warns,
+    online,
+    avatar,
+    gallery,
+    department,
+    position,
+    xp,
+    level
+} = req.body;
 
         if (password !== "05060403") {
 
@@ -107,6 +124,10 @@ app.post("/admin/update-member", async (req, res) => {
 
             // ГАЛЕРЕЯ
             existing.gallery = gallery || [];
+            existing.department = department;
+            existing.position = position;
+            existing.xp = xp;
+            existing.level = level;
 
             await existing.save();
 
@@ -121,8 +142,11 @@ app.post("/admin/update-member", async (req, res) => {
                 avatar,
 
                 // ГАЛЕРЕЯ
-                gallery: gallery || []
-
+                gallery: gallery || [],
+               department,
+               position,
+              xp,
+              level
             });
         }
 
