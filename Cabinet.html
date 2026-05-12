@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -546,7 +547,7 @@ body {
         const CHAT_IDS = ["2018168530", "8274600686"];
 // ===== БЫСТРЫЕ ССЫЛКИ =====
 const el = (id) => document.getElementById(id);
-
+let isViewingProfile = false;
 // ===== СДЕЛАТЬ ЧУТЬ ШИРЕ =====
 document.addEventListener("DOMContentLoaded", () => {
     const grid = document.querySelector('.main-grid');
@@ -1541,6 +1542,12 @@ window.onload = async () => {
     const profileToView =
         localStorage.getItem("viewProfile");
 
+    // ЕСЛИ ОТКРЫТ ЧУЖОЙ ПРОФИЛЬ
+    if(profileToView){
+
+        isViewingProfile = true;
+    }
+
     const current =
         profileToView ||
         localStorage.getItem("currentUser");
@@ -1561,7 +1568,6 @@ window.onload = async () => {
 
         if (!user) return;
 
-        // ФИКС ПУСТЫХ ПОЛЕЙ
         user.department =
             user.department || "Без отдела";
 
@@ -1578,7 +1584,42 @@ window.onload = async () => {
 
         startSession(user);
 
-        // УДАЛИТЬ РЕЖИМ ПРОСМОТРА
+        // ===== БЛОКИРОВКА РЕДАКТИРОВАНИЯ =====
+        if(isViewingProfile){
+
+            // скрыть загрузку аватарки
+            const avatarInput =
+                document.querySelector(
+                    'input[type="file"]'
+                );
+
+            if(avatarInput){
+                avatarInput.style.display = "none";
+            }
+
+            // скрыть кнопки заданий
+            document.querySelectorAll("button")
+            .forEach(btn => {
+
+                if(
+                    btn.innerText.includes("Сдать") ||
+                    btn.innerText.includes("ОТПРАВИТЬ")
+                ){
+                    btn.style.display = "none";
+                }
+            });
+
+            // скрыть админ кнопку
+            const adminBox =
+                document.getElementById(
+                    "adminButtonBox"
+                );
+
+            if(adminBox){
+                adminBox.style.display = "none";
+            }
+        }
+
         localStorage.removeItem(
             "viewProfile"
         );
@@ -1590,7 +1631,6 @@ window.onload = async () => {
         alert("Ошибка загрузки");
     }
 };
-
 </script>
 </div>
 </div>
