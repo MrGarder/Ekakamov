@@ -1551,19 +1551,28 @@ window.onload = async () => {
 
         const users = await res.json();
 
-        const user = users.find(
-            u => u.name === current
-        );
+       const user = users.find(
+    u => u.name === current
+);
 
-        if (!user) return;
+if (!user) return;
 
-        localStorage.setItem(
-            "user_" + current,
-            JSON.stringify(user)
-        );
+// ФИКС ПУСТЫХ ПОЛЕЙ
+user.department =
+    user.department || "Без отдела";
 
-        startSession(user);
+user.position =
+    user.position || "Участник";
 
+user.gallery =
+    user.gallery || [];
+
+localStorage.setItem(
+    "user_" + current,
+    JSON.stringify(user)
+);
+
+startSession(user);
     } catch(err) {
 
         console.log(err);
