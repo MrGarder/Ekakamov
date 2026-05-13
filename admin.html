@@ -322,6 +322,10 @@
 <script>
 function getRankClass(rank){
 
+    if(!rank){
+        return "rank-1";
+    }
+
     if(rank.includes("[11]")){
         return "rank-11";
     }
@@ -404,7 +408,14 @@ async function loadMembers(){
 
     tbody.innerHTML = "";
 
-    members.forEach(m => {
+  members.forEach(m => {
+
+    if(!m.name){
+        return;
+    }
+
+    m.rank =
+        m.rank || "[1] Кандидат";
 
 const localUser = JSON.parse(
     localStorage.getItem("user_" + m.name)
@@ -413,7 +424,7 @@ const localUser = JSON.parse(
 if(localUser){
 
     m.avatar = localUser.avatar || "";
-} 
+}
 
         tbody.innerHTML += `
 
