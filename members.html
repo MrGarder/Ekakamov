@@ -59,8 +59,7 @@
 
         /* ЦВЕТА РАНГОВ */
         .rank-badge { padding: 5px 12px; border-radius: 4px; font-weight: bold; font-size: 11px; text-transform: uppercase; display: inline-block; color: #fff; }
-         
-        .rank-11{ background: #2006b8; }
+        
         .rank-10 { background: #ff0000; box-shadow: 0 0 15px rgba(255,0,0,0.5); border: 1px solid #fff; }
         .rank-9  { background: #8b0000; border: 1px solid #ff0000; }
         .rank-8  { background: #ff8c00; }
@@ -72,12 +71,25 @@
         .rank-2  { background: #888; color: #000; }
         .rank-1  { background: #555; color: #ccc; }
 
-        .avatar-circle { 
-            width: 35px; height: 35px; background: linear-gradient(45deg, #222, #333); 
-            border-radius: 50%; display: inline-block; vertical-align: middle; 
-            margin-right: 12px; border: 1px solid #444; text-align: center; 
-            line-height: 35px; color: var(--accent); font-weight: bold; 
-        }
+      .avatar-circle {
+
+    width: 42px;
+    height: 42px;
+
+    border-radius: 50%;
+
+    display: inline-block;
+
+    vertical-align: middle;
+
+    margin-right: 12px;
+
+    border: 1px solid #444;
+
+    overflow: hidden;
+
+    background: #111;
+}
 
         .section-title { text-align: center; text-transform: uppercase; color: var(--accent); letter-spacing: 2px; margin: 60px 0 30px; }
         .desc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }
@@ -97,7 +109,7 @@
         <a href="rankup.html">Повышение</a>
         <a href="unwarn.html">Выговоры</a>
         <a href="complaints.html">Отчет жалоб</a>
-        <a href="bonus.html">Премиальная система</a>
+        <a href="Bonus.html">Премиальная система</a>
     </nav>
 
     <div class="container">
@@ -123,88 +135,218 @@
     </div>
 
     <script>
-         const hierarchy = [
-            {r:-11, n: "Разработчик", d: "Разработчик."},
-            {r: 10, n: "Глава", d: "Лидер семьи."},
-            {r: 9, n: "Зам. Главы", d: "Правая рука лидера."},
-            {r: 8, n: "Гольд", d: "Старший советник."},
-            {r: 7, n: "Шерх", d: "Тренер состава."},
-            {r: 6, n: "Элит", d: "Опытный боец."},
-            {r: 5, n: "Ветеран", d: "Наставник."},
-            {r: 4, n: "Боец", d: "Участник захватов."},
-            {r: 3, n: "Новичок+", d: "Лояльный участник."},
-            {r: 2, n: "Равк", d: "Сдал устав."},
-            {r: 1, n: "Кандидат", d: "На проверке."}
-        ];
 
+const hierarchy = [
 
-        const hBox = document.getElementById('hierarchy-box');
-        hierarchy.forEach(item => {
-            hBox.innerHTML += `<div class="desc-item"><b>[${item.r}] ${item.n}</b> ${item.d}</div>`;
+    {r: 10, n: "Глава", d: "Лидер семьи."},
+    {r: 9, n: "Зам. Главы", d: "Правая рука лидера."},
+    {r: 8, n: "Гольд", d: "Старший советник."},
+    {r: 7, n: "Шерх", d: "Тренер состава."},
+    {r: 6, n: "Элит", d: "Опытный боец."},
+    {r: 5, n: "Ветеран", d: "Наставник."},
+    {r: 4, n: "Боец", d: "Участник захватов."},
+    {r: 3, n: "Новичок+", d: "Лояльный участник."},
+    {r: 2, n: "Равк", d: "Сдал устав."},
+    {r: 1, n: "Кандидат", d: "На проверке."}
+
+];
+
+const hBox =
+    document.getElementById('hierarchy-box');
+
+hierarchy.forEach(item => {
+
+    hBox.innerHTML += `
+        <div class="desc-item">
+            <b>[${item.r}] ${item.n}</b>
+            ${item.d}
+        </div>
+    `;
+});
+
+// ===== РАНГ =====
+
+function extractRankNumber(rankStr) {
+
+    const match =
+        String(rankStr).match(/\d+/);
+
+    return match
+        ? parseInt(match[0])
+        : 1;
+}
+
+// ===== ЗАГРУЗКА СОСТАВА =====
+
+async function loadData() {
+
+    try {
+
+        const response =
+            await fetch('/admin/get-members');
+
+        const data =
+            await response.json();
+
+        const list =
+            document.getElementById(
+                'member-list'
+            );
+
+        list.innerHTML = '';
+
+        // СОРТИРОВКА ПО РАНГУ
+        data.sort((a, b) => {
+
+            return extractRankNumber(b.rank)
+                 - extractRankNumber(a.rank);
+
         });
 
-        // Функция для извлечения числа из строки типа "[10] Глава"
-        function extractRankNumber(rankStr) {
-            const match = String(rankStr).match(/\d+/); // Ищет первое число в строке
-            return match ? parseInt(match[0]) : 1;
-        }
+        data.forEach(m => {
 
-        async function loadData() {
-            try {
-                const response = await fetch('/get-statuses');
-                const data = await response.json();
-                const list = document.getElementById('member-list');
-                list.innerHTML = '';
+            const isOnline =
+                m.online
+                ? 'is-online'
+                : 'is-offline';
 
-                const sortedNames = Object.keys(data).sort((a, b) => {
-                    return extractRankNumber(data[b].rank) - extractRankNumber(data[a].rank);
-                });
+            const rNum =
+                extractRankNumber(m.rank);
 
-                sortedNames.forEach(name => {
-                    if (name === "CHECK_AUTH" || name === "TEST") return;
-                    const m = data[name];
-                    const isOnline = m.online ? 'is-online' : 'is-offline';
-                    
-                    const rNum = extractRankNumber(m.rank);
-                    const rClass = `rank-${rNum}`;
+            const rClass =
+                `rank-${rNum}`;
 
-                    list.innerHTML += `
-                        <tr class="${isOnline}">
-                            <td><div class="avatar-circle">${name[0]}</div> <b>${name}</b></td>
-                            <td><span class="rank-badge ${rClass}">${m.rank}</span></td>
-                            <td class="warn-count">${m.warns || 0} / 3</td>
-                            <td class="status-cell" onclick="togglePlayerStatus('${name}', ${m.online})">
-                                <span class="pulse"></span><span class="status-text"></span>
-                            </td>
-                        </tr>
-                    `;
-                });
+            list.innerHTML += `
 
-                updateStats();
-            } catch (e) {
-                console.log("Ошибка загрузки данных");
-            }
-        }
+<tr class="${isOnline}">
 
-        async function togglePlayerStatus(name, currentStatus) {
-            await fetch('/admin/update-member', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: "01050302", name: name, online: !currentStatus })
-            });
-            loadData();
-        }
+<td>
 
-        function updateStats() {
-            const total = document.querySelectorAll('#member-list tr').length;
-            const online = document.querySelectorAll('#member-list tr.is-online').length;
-            document.getElementById('total-count').innerText = total;
-            document.getElementById('online-count').innerText = online;
-        }
+<div class="avatar-circle">
 
-        loadData();
-        setInterval(loadData, 5000);
-    </script>
+<img
+    src="${
+        m.avatar ||
+        'https://i.imgur.com/6VBx3io.png'
+    }"
+
+    style="
+        width:100%;
+        height:100%;
+        object-fit:cover;
+        border-radius:50%;
+    "
+>
+
+</div>
+
+<b>${m.name}</b>
+
+</td>
+
+<td>
+
+<span class="rank-badge ${rClass}">
+
+${m.rank}
+
+</span>
+
+</td>
+
+<td class="warn-count">
+
+${m.warns || 0} / 3
+
+</td>
+
+<td
+class="status-cell"
+
+onclick="
+togglePlayerStatus(
+'${m.name}',
+${m.online}
+)">
+    <span class="pulse"></span>
+    <span class="status-text"></span>
+</td>
+
+</tr>
+
+            `;
+        });
+
+        updateStats();
+
+    } catch (e) {
+
+        console.log(e);
+
+        console.log(
+            "Ошибка загрузки данных"
+        );
+    }
+}
+
+// ===== СТАТУС =====
+
+async function togglePlayerStatus(
+    name,
+    currentStatus
+) {
+
+    await fetch('/admin/update-member', {
+
+        method: 'POST',
+
+        headers: {
+            'Content-Type':
+            'application/json'
+        },
+
+        body: JSON.stringify({
+
+            password: "05060403",
+
+            name: name,
+
+            online: !currentStatus
+        })
+    });
+
+    loadData();
+}
+
+// ===== СТАТИСТИКА =====
+
+function updateStats() {
+
+    const total =
+        document.querySelectorAll(
+            '#member-list tr'
+        ).length;
+
+    const online =
+        document.querySelectorAll(
+            '#member-list tr.is-online'
+        ).length;
+
+    document.getElementById(
+        'total-count'
+    ).innerText = total;
+
+    document.getElementById(
+        'online-count'
+    ).innerText = online;
+}
+
+// ===== СТАРТ =====
+
+loadData();
+
+setInterval(loadData, 5000);
+
+</script>
 </body>
-
 </html>
