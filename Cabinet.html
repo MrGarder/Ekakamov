@@ -790,6 +790,10 @@ function updateXP() {
 
 function getRankClass(rank){
 
+    if(!rank){
+        return "rank-1";
+    }
+
     if(rank.includes("[11]")){
         return "rank-11";
     }
