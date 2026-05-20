@@ -4,6 +4,132 @@ const cors = require("cors");
 
 const app = express();
 
+const cloudinary = require("cloudinary").v2;
+
+const multer = require("multer");
+
+const { CloudinaryStorage } =
+require("multer-storage-cloudinary");
+
+cloudinary.config({
+
+    cloud_name: "dk7o3keez",
+
+    api_key: "669527537632519",
+
+    api_secret: "HPuD0MeI320ThXRwc-RUJhbXKlw"
+});
+
+const storage =
+new CloudinaryStorage({
+
+    cloudinary,
+
+    params: {
+
+        folder: "avatars",
+
+        allowed_formats: [
+            "jpg",
+            "png",
+            "jpeg",
+            "webp"
+        ]
+    }
+});
+
+const upload = multer({
+    storage
+});
+
+app.post(
+
+    "/upload-gallery",
+
+    upload.array("images", 10),
+
+    async (req, res) => {
+
+        try {
+
+            const { name } = req.body;
+
+            let user =
+                await Member.findOne({
+                    name
+                });
+
+            if(!user){
+
+                return res.sendStatus(404);
+            }
+
+            const urls =
+                req.files.map(
+                    file => file.path
+                );
+
+            user.gallery = [
+                ...(user.gallery || []),
+                ...urls
+            ];
+
+            await user.save();
+
+            res.json({
+                gallery: user.gallery
+            });
+
+        } catch(err){
+
+            console.log(err);
+
+            res.sendStatus(500);
+        }
+    }
+);
+
+app.post(
+
+    "/upload-avatar",
+
+    upload.single("avatar"),
+
+    async (req, res) => {
+
+        try {
+
+            const { name } = req.body;
+
+            const avatar =
+                req.file.path;
+
+            let user =
+                await Member.findOne({
+                    name
+                });
+
+            if(!user){
+
+                return res.sendStatus(404);
+            }
+
+            user.avatar = avatar;
+
+            await user.save();
+
+            res.json({
+                avatar
+            });
+
+        } catch(err){
+
+            console.log(err);
+
+            res.sendStatus(500);
+        }
+    }
+);
 // ===== MIDDLEWARE =====
 
 app.use(cors());
@@ -26,6 +152,8 @@ mongoose.connect(
         useUnifiedTopology: true
     }
 )
+
+
 
 .then(() => {
 
