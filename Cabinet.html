@@ -1227,7 +1227,6 @@ btn.style.opacity = "1";
 
 
 
-// ===== АВАТАР CLOUDINARY =====
 async function changeAvatar(e) {
 
     const file = e.target.files[0];
@@ -1248,11 +1247,6 @@ async function changeAvatar(e) {
         )
     );
 
-    if (!user) {
-        alert("Пользователь не найден");
-        return;
-    }
-
     const formData = new FormData();
 
     formData.append("avatar", file);
@@ -1268,11 +1262,27 @@ async function changeAvatar(e) {
             }
         );
 
-        if (!res.ok) {
-            throw new Error("UPLOAD ERROR");
+        const text = await res.text();
+
+        console.log(text);
+
+        let data;
+
+        try {
+            data = JSON.parse(text);
+        } catch {
+
+            throw new Error(
+                "Сервер вернул не JSON"
+            );
         }
 
-        const data = await res.json();
+        if (!res.ok) {
+
+            throw new Error(
+                data.error || "UPLOAD ERROR"
+            );
+        }
 
         user.avatar = data.avatar;
 
@@ -1285,11 +1295,18 @@ async function changeAvatar(e) {
             "avatar"
         ).src = data.avatar;
 
+        console.log(
+            "AVATAR UPDATED:",
+            data.avatar
+        );
+
     } catch(err){
 
         console.log(err);
 
-        alert("Ошибка загрузки аватарки");
+        alert(
+            "Ошибка загрузки аватарки"
+        );
     }
 }
 
