@@ -551,17 +551,19 @@ try {
 
         } catch(err){
 
-            console.log(
-                "UPLOAD ERROR:"
-            );
+    console.log("===== UPLOAD ERROR =====");
 
-            console.log(err);
+    console.log(err);
 
-            res.status(500).json({
-                success: false,
-                error: err.message
-            });
-        }
+    console.log(err.message);
+
+    console.log(err.stack);
+
+    res.status(500).json({
+        success:false,
+        error:String(err)
+    });
+}
     }
 );
 
