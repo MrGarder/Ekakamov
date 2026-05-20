@@ -463,6 +463,62 @@ app.post("/login", async (req, res) => {
         res.status(500).send("SERVER ERROR");
     }
 });
+
+
+app.post(
+
+    "/upload-avatar",
+
+    upload.single("avatar"),
+
+    async (req, res) => {
+
+        try {
+
+            console.log(req.file);
+
+            if (!req.file) {
+
+                return res.status(400).json({
+                    error: "Файл не загружен"
+                });
+            }
+
+            const { name } = req.body;
+
+            let user =
+                await Member.findOne({
+                    name
+                });
+
+            if (!user) {
+
+                return res.sendStatus(404);
+            }
+
+            const avatar =
+                req.file.path ||
+                req.file.secure_url;
+
+            user.avatar = avatar;
+
+            await user.save();
+
+            res.json({
+                avatar
+            });
+
+        } catch(err){
+
+            console.log(err.message);
+            console.log(err);
+
+            res.status(500).json({
+                error: err.message
+            });
+        }
+    }
+);
 app.post(
 
     "/upload-gallery",
@@ -513,54 +569,3 @@ app.post(
     }
 );
 
-app.post(
-
-    "/upload-avatar",
-
-    upload.single("avatar"),
-
-    async (req, res) => {
-
-        try {
-
-            if (!req.file) {
-
-                return res.status(400).json({
-                    error: "Файл не загружен"
-                });
-            }
-
-            const { name } = req.body;
-
-            let user =
-                await Member.findOne({
-                    name
-                });
-
-            if (!user) {
-
-                return res.sendStatus(404);
-            }
-
-            const avatar =
-                req.file.path;
-
-            user.avatar = avatar;
-
-            await user.save();
-
-            res.json({
-                avatar
-            });
-
-        } catch(err){
-
-            console.log(err.message);
-            console.log(err);
-
-            res.status(500).json({
-                error: err.message
-            });
-        }
-    }
-);
