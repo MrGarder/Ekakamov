@@ -1227,145 +1227,28 @@ btn.style.opacity = "1";
 
 
 
-// ===== АВАТАР =====
-async function changeAvatar(e) {
+app.post(
 
-    const file = e.target.files[0];
+    "/upload-avatar",
 
-    if (!file) return;
+    upload.single("avatar"),
 
-    const reader = new FileReader();
+    async (req, res) => {
 
-    reader.onload = async function(ev) {
+        try {
 
-        const img = ev.target.result;
+            res.json({
+                avatar: req.file.path
+            });
 
-        document.getElementById('avatar').src = img;
+        } catch(err){
 
-        const current =
-            localStorage.getItem("currentUser");
+            console.log(err);
 
-        let user = JSON.parse(
-            localStorage.getItem(
-                "user_" + current
-            )
-        );
-
-        user.avatar = img;
-
-        localStorage.setItem(
-            "user_" + current,
-            JSON.stringify(user)
-        );
-
-        // ===== MONGODB =====
-
-        await fetch(
-            "/admin/update-member",
-            {
-                method: "POST",
-
-                headers: {
-                    "Content-Type":
-                        "application/json"
-                },
-
-                body: JSON.stringify({
-
-                    password: "05060403",
-
-                    name: user.name,
-
-                    rank: user.rank,
-
-                    warns: user.warns,
-
-                    online: true,
-
-                    avatar: img
-                })
-            }
-        );
-    };
-
-    reader.readAsDataURL(file);
-}
-// ===== ГАЛЕРЕЯ =====
-
-function uploadImages(event) {
-
-    const files = event.target.files;
-
-    if (!files.length) return;
-
-    const current = localStorage.getItem("currentUser");
-
-    if (!current) {
-        alert("Нет пользователя");
-        return;
-    }
-
-    let user = JSON.parse(localStorage.getItem("user_" + current));
-
-    if (!user.gallery) {
-        user.gallery = [];
-    }
-
-    Array.from(files).forEach(file => {
-
-        // ПРОВЕРКА
-      reader.onload = async function(e) {
-
-    user.gallery.push(e.target.result);
-
-    localStorage.setItem(
-        "user_" + current,
-        JSON.stringify(user)
-    );
-
-    await fetch(
-        "/admin/update-member",
-        {
-            method: "POST",
-
-            headers: {
-                "Content-Type": "application/json"
-            },
-
-            body: JSON.stringify({
-
-                password: "05060403",
-
-                name: user.name,
-
-                rank: user.rank,
-
-                warns: user.warns,
-
-                online: user.online,
-
-                avatar: user.avatar,
-
-                gallery: user.gallery,
-
-                department: user.department,
-
-                position: user.position,
-
-                xp: user.xp,
-
-                level: user.level
-            })
+            res.sendStatus(500);
         }
-    );
-
-    renderGallery();
-};
-
-        reader.readAsDataURL(file);
-    });
-}
-
+    }
+);
 function renderGallery() {
 
     const gallery =
