@@ -13,11 +13,11 @@ require("multer-storage-cloudinary");
 
 cloudinary.config({
 
-    cloud_name: "Ekakamov",
+    cloud_name: "mediaflows_8e24758a-471a-4aae-8cbd-00e7190033e7",
 
-    api_key: "427374582142386",
+    api_key: "327451465429494",
 
-    api_secret: "HPuD0MeI320ThXRwc-RUJhbXKlw"
+    api_secret: "2JsQ6eQp5_ikqpPWfJdEI46mSfQ"
 });
 
 process.on("uncaughtException", err => {
