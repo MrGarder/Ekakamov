@@ -23,26 +23,20 @@ cloudinary.config({
 const storage =
 new CloudinaryStorage({
 
-    cloudinary,
+    cloudinary: cloudinary,
 
-    params: async (req, file) => {
+    params: {
 
-        return {
+        folder: "avatars",
 
-            folder: "avatars",
+        resource_type: "image",
 
-            resource_type: "image",
-
-            allowed_formats: [
-                "jpg",
-                "jpeg",
-                "png",
-                "webp"
-            ],
-
-            public_id:
-                Date.now() + "-avatar"
-        };
+        allowed_formats: [
+            "jpg",
+            "jpeg",
+            "png",
+            "webp"
+        ]
     }
 });
 
