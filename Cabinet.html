@@ -1227,28 +1227,73 @@ btn.style.opacity = "1";
 
 
 
-app.post(
+// ===== АВАТАР CLOUDINARY =====
+async function changeAvatar(e) {
 
-    "/upload-avatar",
+    const file = e.target.files[0];
 
-    upload.single("avatar"),
+    if (!file) return;
 
-    async (req, res) => {
+    const current =
+        localStorage.getItem("currentUser");
 
-        try {
-
-            res.json({
-                avatar: req.file.path
-            });
-
-        } catch(err){
-
-            console.log(err);
-
-            res.sendStatus(500);
-        }
+    if (!current) {
+        alert("Нет пользователя");
+        return;
     }
-);
+
+    let user = JSON.parse(
+        localStorage.getItem(
+            "user_" + current
+        )
+    );
+
+    if (!user) {
+        alert("Пользователь не найден");
+        return;
+    }
+
+    const formData = new FormData();
+
+    formData.append("avatar", file);
+    formData.append("name", user.name);
+
+    try {
+
+        const res = await fetch(
+            "/upload-avatar",
+            {
+                method: "POST",
+                body: formData
+            }
+        );
+
+        if (!res.ok) {
+            throw new Error("UPLOAD ERROR");
+        }
+
+        const data = await res.json();
+
+        user.avatar = data.avatar;
+
+        localStorage.setItem(
+            "user_" + current,
+            JSON.stringify(user)
+        );
+
+        document.getElementById(
+            "avatar"
+        ).src = data.avatar;
+
+    } catch(err){
+
+        console.log(err);
+
+        alert("Ошибка загрузки аватарки");
+    }
+}
+
+// ===== РЕНДЕР ГАЛЕРЕИ =====
 function renderGallery() {
 
     const gallery =
@@ -1267,10 +1312,15 @@ function renderGallery() {
         )
     );
 
+    if (!user) return;
+
+    if (!user.gallery) {
+        user.gallery = [];
+    }
+
     gallery.innerHTML = "";
 
-    if (!user.gallery ||
-        user.gallery.length === 0) {
+    if (user.gallery.length === 0) {
 
         gallery.innerHTML = `
             <div style="
@@ -1335,6 +1385,7 @@ function renderGallery() {
     });
 }
 
+// ===== УДАЛЕНИЕ ФОТО =====
 async function deleteImage(index) {
 
     const current =
@@ -1344,10 +1395,13 @@ async function deleteImage(index) {
 
     try {
 
-        // ПОЛУЧАЕМ ЮЗЕРА С СЕРВЕРА
         const res = await fetch(
             "/admin/get-members"
         );
+
+        if (!res.ok) {
+            throw new Error("GET MEMBERS ERROR");
+        }
 
         const users = await res.json();
 
@@ -1356,14 +1410,20 @@ async function deleteImage(index) {
         );
 
         if (!user) {
-            return alert("Юзер не найден");
+
+            alert("Юзер не найден");
+            return;
+        }
+
+        if (!user.gallery) {
+            user.gallery = [];
         }
 
         // УДАЛЯЕМ ФОТО
         user.gallery.splice(index, 1);
 
-        // СОХРАНЯЕМ В MONGODB
-        await fetch(
+        // СОХРАНЯЕМ В БАЗУ
+        const saveRes = await fetch(
             "/admin/update-member",
             {
                 method: "POST",
@@ -1387,12 +1447,30 @@ async function deleteImage(index) {
 
                     avatar: user.avatar,
 
-                    gallery: user.gallery
+                    gallery: user.gallery,
+
+                    department: user.department,
+
+                    position: user.position,
+
+                    xp: user.xp,
+
+                    level: user.level
                 })
             }
         );
 
-        // ОБНОВИТЬ ЭКРАН
+        if (!saveRes.ok) {
+            throw new Error("SAVE ERROR");
+        }
+
+        // ОБНОВЛЯЕМ LOCALSTORAGE
+        localStorage.setItem(
+            "user_" + current,
+            JSON.stringify(user)
+        );
+
+        // ОБНОВЛЯЕМ ЭКРАН
         renderGallery();
 
     } catch(err) {
