@@ -20,6 +20,24 @@ cloudinary.config({
     api_secret: "HPuD0MeI320ThXRwc-RUJhbXKlw"
 });
 
+process.on("uncaughtException", err => {
+
+    console.log("UNCAUGHT EXCEPTION:");
+
+    console.log(err);
+
+    console.log(err.stack);
+});
+
+process.on("unhandledRejection", err => {
+
+    console.log("UNHANDLED REJECTION:");
+
+    console.log(err);
+
+    console.log(err?.stack);
+});
+
 const storage =
 new CloudinaryStorage({
 
@@ -478,9 +496,10 @@ app.post(
     upload.single("avatar"),
 
     async (req, res) => {
+    console.log("UPLOAD ROUTE HIT");
 
         try {
-
+            console.log("START UPLOAD");
             console.log("===== AVATAR REQUEST =====");
 
             console.log("BODY:");
