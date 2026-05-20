@@ -475,6 +475,8 @@ app.post("/login", async (req, res) => {
 
 // ===== UPLOAD AVATAR =====
 
+// ===== UPLOAD AVATAR =====
+
 app.post(
 
     "/upload-avatar",
@@ -482,91 +484,95 @@ app.post(
     upload.single("avatar"),
 
     async (req, res) => {
-try {
 
-    console.log(req.file);
+        try {
 
-    console.log(
-        JSON.stringify(req.file, null, 2)
-    );
+            console.log("===== AVATAR REQUEST =====");
 
-            // ФАЙЛ НЕ ЗАГРУЗИЛСЯ
+            console.log("BODY:");
+            console.log(req.body);
+
+            console.log("FILE:");
+            console.log(req.file);
+
+            // ===== ПРОВЕРКА ФАЙЛА =====
             if (!req.file) {
 
                 return res.status(400).json({
+                    success: false,
                     error: "Файл не загружен"
                 });
             }
 
-            // ИМЯ ЮЗЕРА
+            // ===== ИМЯ =====
             const { name } = req.body;
 
             if (!name) {
 
                 return res.status(400).json({
+                    success: false,
                     error: "Имя не передано"
                 });
             }
 
-            // ИЩЕМ ЮЗЕРА
+            // ===== ИЩЕМ ЮЗЕРА =====
             const user = await Member.findOne({
-                name
+                name: name
             });
 
             if (!user) {
 
                 return res.status(404).json({
+                    success: false,
                     error: "Юзер не найден"
                 });
             }
 
-            // CLOUDINARY URL
+            // ===== CLOUDINARY URL =====
             const avatar =
-                req.file.path ||
-                req.file.secure_url ||
-                req.file.url;
+                req.file.path;
+
+            console.log("AVATAR URL:");
+            console.log(avatar);
 
             if (!avatar) {
 
                 return res.status(500).json({
-                    error: "Cloudinary не вернул ссылку"
+                    success: false,
+                    error: "Cloudinary URL пустой"
                 });
             }
 
-            // СОХРАНЯЕМ
+            // ===== СОХРАНЯЕМ =====
             user.avatar = avatar;
 
             await user.save();
 
-            console.log(
-                "AVATAR SAVED:",
-                avatar
-            );
+            console.log("AVATAR SAVED");
 
-            // ОТВЕТ
-            res.json({
+            // ===== ОТВЕТ =====
+            return res.json({
                 success: true,
                 avatar: avatar
             });
 
         } catch(err){
 
-    console.log("===== UPLOAD ERROR =====");
+            console.log("===== UPLOAD ERROR =====");
 
-    console.log(err);
+            console.log(err);
 
-    console.log(err.message);
+            console.log(err.message);
 
-    console.log(err.stack);
+            console.log(err.stack);
 
-    res.status(500).json({
-        success:false,
-        error:String(err)
-    });
-}
+            return res.status(500).json({
+                success:false,
+                error:String(err)
+            });
+        }
     }
 );
-
 // ===== UPLOAD GALLERY =====
 
 app.post(
