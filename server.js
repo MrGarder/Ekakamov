@@ -42,94 +42,6 @@ const upload = multer({
     storage
 });
 
-app.post(
-
-    "/upload-gallery",
-
-    upload.array("images", 10),
-
-    async (req, res) => {
-
-        try {
-
-            const { name } = req.body;
-
-            let user =
-                await Member.findOne({
-                    name
-                });
-
-            if(!user){
-
-                return res.sendStatus(404);
-            }
-
-            const urls =
-                req.files.map(
-                    file => file.path
-                );
-
-            user.gallery = [
-                ...(user.gallery || []),
-                ...urls
-            ];
-
-            await user.save();
-
-            res.json({
-                gallery: user.gallery
-            });
-
-        } catch(err){
-
-            console.log(err);
-
-            res.sendStatus(500);
-        }
-    }
-);
-
-app.post(
-
-    "/upload-avatar",
-
-    upload.single("avatar"),
-
-    async (req, res) => {
-
-        try {
-
-            const { name } = req.body;
-
-            const avatar =
-                req.file.path;
-
-            let user =
-                await Member.findOne({
-                    name
-                });
-
-            if(!user){
-
-                return res.sendStatus(404);
-            }
-
-            user.avatar = avatar;
-
-            await user.save();
-
-            res.json({
-                avatar
-            });
-
-        } catch(err){
-
-            console.log(err);
-
-            res.sendStatus(500);
-        }
-    }
-);
 // ===== MIDDLEWARE =====
 
 app.use(cors());
@@ -396,7 +308,7 @@ app.post("/admin/delete-gallery-image", async (req, res) => {
             index
         } = req.body;
 
-        if (password !== "05060403") {
+        if(password !== "05060403"){
 
             return res
             .status(403)
@@ -407,23 +319,47 @@ app.post("/admin/delete-gallery-image", async (req, res) => {
             name
         });
 
-        if (!user) {
+        if(!user){
 
             return res.sendStatus(404);
         }
 
-        if (!user.gallery) {
+        if(!user.gallery){
 
             user.gallery = [];
         }
 
+        // ФОТО КОТОРОЕ УДАЛЯЕМ
+        const imageUrl = user.gallery[index];
+
+        if(!imageUrl){
+
+            return res.sendStatus(404);
+        }
+
+        // ===== CLOUDINARY PUBLIC ID =====
+        const parts = imageUrl.split("/");
+
+        const fileName =
+            parts[parts.length - 1];
+
+        const publicId =
+            "avatars/" +
+            fileName.split(".")[0];
+
+        // ===== УДАЛЕНИЕ ИЗ CLOUDINARY =====
+        await cloudinary.uploader.destroy(
+            publicId
+        );
+
+        // ===== УДАЛЕНИЕ ИЗ МАССИВА =====
         user.gallery.splice(index, 1);
 
         await user.save();
 
         res.sendStatus(200);
 
-    } catch(err) {
+    } catch(err){
 
         console.log(err);
 
@@ -528,3 +464,91 @@ app.post("/login", async (req, res) => {
     }
 });
 
+app.post(
+
+    "/upload-gallery",
+
+    upload.array("images", 10),
+
+    async (req, res) => {
+
+        try {
+
+            const { name } = req.body;
+
+            let user =
+                await Member.findOne({
+                    name
+                });
+
+            if(!user){
+
+                return res.sendStatus(404);
+            }
+
+            const urls =
+                req.files.map(
+                    file => file.path
+                );
+
+            user.gallery = [
+                ...(user.gallery || []),
+                ...urls
+            ];
+
+            await user.save();
+
+            res.json({
+                gallery: user.gallery
+            });
+
+        } catch(err){
+
+            console.log(err);
+
+            res.sendStatus(500);
+        }
+    }
+);
+
+app.post(
+
+    "/upload-avatar",
+
+    upload.single("avatar"),
+
+    async (req, res) => {
+
+        try {
+
+            const { name } = req.body;
+
+            const avatar =
+                req.file.path;
+
+            let user =
+                await Member.findOne({
+                    name
+                });
+
+            if(!user){
+
+                return res.sendStatus(404);
+            }
+
+            user.avatar = avatar;
+
+            await user.save();
+
+            res.json({
+                avatar
+            });
+
+        } catch(err){
+
+            console.log(err);
+
+            res.sendStatus(500);
+        }
+    }
+);
