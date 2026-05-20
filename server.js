@@ -521,20 +521,27 @@ app.post(
 
         try {
 
-            const { name } = req.body;
+            if (!req.file) {
 
-            const avatar =
-                req.file.path;
+                return res.status(400).json({
+                    error: "Файл не загружен"
+                });
+            }
+
+            const { name } = req.body;
 
             let user =
                 await Member.findOne({
                     name
                 });
 
-            if(!user){
+            if (!user) {
 
                 return res.sendStatus(404);
             }
+
+            const avatar =
+                req.file.path;
 
             user.avatar = avatar;
 
@@ -548,7 +555,9 @@ app.post(
 
             console.log(err);
 
-            res.sendStatus(500);
+            res.status(500).json({
+                error: err.message
+            });
         }
     }
 );
