@@ -33,7 +33,12 @@ new CloudinaryStorage({
 
             resource_type: "image",
 
-            format: "png",
+            allowed_formats: [
+                "jpg",
+                "jpeg",
+                "png",
+                "webp"
+            ],
 
             public_id:
                 Date.now() + "-avatar"
@@ -468,6 +473,7 @@ app.post("/login", async (req, res) => {
 });
 
 
+// ===== UPLOAD AVATAR =====
 app.post(
 
     "/upload-avatar",
@@ -478,8 +484,10 @@ app.post(
 
         try {
 
-            console.log(req.file);
+            console.log("FILE:", req.file);
+            console.log("BODY:", req.body);
 
+            // ФАЙЛ НЕ ЗАГРУЗИЛСЯ
             if (!req.file) {
 
                 return res.status(400).json({
@@ -487,36 +495,61 @@ app.post(
                 });
             }
 
+            // ИМЯ ЮЗЕРА
             const { name } = req.body;
 
-            let user =
-                await Member.findOne({
-                    name
+            if (!name) {
+
+                return res.status(400).json({
+                    error: "Имя не передано"
                 });
+            }
+
+            // ИЩЕМ ЮЗЕРА
+            const user = await Member.findOne({
+                name: name
+            });
 
             if (!user) {
 
-                return res.sendStatus(404);
+                return res.status(404).json({
+                    error: "Юзер не найден"
+                });
             }
 
+            // ССЫЛКА CLOUDINARY
             const avatar =
                 req.file.path ||
-                req.file.secure_url;
+                req.file.secure_url ||
+                req.file.url;
 
+            if (!avatar) {
+
+                return res.status(500).json({
+                    error: "Cloudinary не вернул ссылку"
+                });
+            }
+
+            // СОХРАНЯЕМ
             user.avatar = avatar;
 
             await user.save();
 
+            console.log("AVATAR SAVED:", avatar);
+
+            // ОТВЕТ
             res.json({
-                avatar
+                success: true,
+                avatar: avatar
             });
 
-        } catch(err){
+        } catch (err) {
 
-            console.log(err.message);
+            console.log("UPLOAD ERROR:");
             console.log(err);
 
             res.status(500).json({
+                success: false,
                 error: err.message
             });
         }
@@ -544,10 +577,10 @@ app.post(
                 return res.sendStatus(404);
             }
 
-            const urls =
-                req.files.map(
-                    file => file.path
-                );
+           const urls =
+    req.files.map(
+        file => file.path || file.secure_url
+    );
 
             user.gallery = [
                 ...(user.gallery || []),
