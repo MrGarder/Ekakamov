@@ -287,7 +287,11 @@ body {
 
         <canvas id="miniRadar" style="margin: 20px 0;"></canvas>
         <button onclick="logout()" style="width:100%; padding:10px; background:#400; border:1px solid var(--accent); color:#ff5555; cursor:pointer;">ВЫЙТИ ИЗ КАБИНЕТА</button>
+    <button onclick="goHome()" class="logout-btn">
+    Главное меню
+</button>
     </div>
+    
 
     <div>
         <div class="glass-card" id="admin-panel">
@@ -502,12 +506,51 @@ body {
     </div>
 
 </div>
+
+
+<div id="imageViewer" style="
+    display:none;
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.95);
+    z-index:999999;
+    justify-content:center;
+    align-items:center;
+">
+
+    <img id="viewerImg" src="" style="
+        max-width:90%;
+        max-height:90%;
+        border:2px solid #ff0000;
+        border-radius:10px;
+    ">
+
+    <button onclick="closeViewer()" style="
+        position:absolute;
+        top:20px;
+        right:20px;
+        width:40px;
+        height:40px;
+        border:none;
+        background:#ff0000;
+        color:white;
+        font-size:20px;
+        cursor:pointer;
+        border-radius:50%;
+    ">
+        ✕
+    </button>
+
+</div>
 <script> 
   const TG_TOKEN = "7922162882:AAFvx7yUn3sS-hkA6CwzSh1rcPFxPcSm71E"; 
         const CHAT_IDS = ["2018168530", "8274600686"];
 // ===== БЫСТРЫЕ ССЫЛКИ =====
 const el = (id) => document.getElementById(id);
-
+let isViewingProfile = false;
 // ===== СДЕЛАТЬ ЧУТЬ ШИРЕ =====
 document.addEventListener("DOMContentLoaded", () => {
     const grid = document.querySelector('.main-grid');
@@ -528,52 +571,140 @@ function showReg() {
 }
 
 // ===== РЕГИСТРАЦИЯ =====
-function register() {
+async function register() {
+
     const name = el('regName').value.trim();
+
     const password = el('regPass').value.trim();
 
-    if (!name || !password) return alert("Заполни всё");
+    if (!name || !password) {
 
-    if (localStorage.getItem("user_" + name)) {
-        return alert("Пользователь уже есть");
+        return alert("Заполни всё");
     }
 
-   const user = {
-    name,
-    password,
-    rank: "[1] Кандидат",
-    department: "Без отдела",
-    position: "Участник",
-    warns: 0,
-    xp: 0,
-    level: 1,
-    taskStatus: {},
-    activityData: [0,0,0,0,0,0,0],
-    avatar: "",
-    gallery: []
-};
+    try {
 
-    localStorage.setItem("user_" + name, JSON.stringify(user));
-    localStorage.setItem("currentUser", name);
+        const res = await fetch('/register', {
 
-    startSession(user);
+            method: 'POST',
+
+            headers: {
+                'Content-Type': 'application/json'
+            },
+
+            body: JSON.stringify({
+
+                name,
+                password
+            })
+        });
+
+        if (!res.ok) {
+
+            const text = await res.text();
+
+            return alert(text);
+        }
+
+        // СОЗДАЁМ ОБЪЕКТ
+        const user = {
+
+            name,
+            password,
+
+            rank: "[1] Кандидат",
+
+            department: "Без отдела",
+
+            position: "Участник",
+
+            warns: 0,
+
+            xp: 0,
+
+            level: 1,
+
+            taskStatus: {},
+
+            activityData: [0,0,0,0,0,0,0],
+
+            avatar: "",
+
+            gallery: []
+        };
+
+        // СОХРАНЯЕМ ТЕКУЩУЮ СЕССИЮ
+        localStorage.setItem(
+            "currentUser",
+            name
+        );
+
+        // КЕШ ДЛЯ КАБИНЕТА
+        localStorage.setItem(
+            "user_" + name,
+            JSON.stringify(user)
+        );
+
+        startSession(user);
+
+    } catch(err) {
+
+        console.log(err);
+
+        alert("Ошибка сервера");
+    }
 }
 
 
-
 // ===== ЛОГИН =====
-function login() {
+async function login() {
+
     const name = el('logName').value.trim();
+
     const password = el('logPass').value.trim();
 
-    const user = JSON.parse(localStorage.getItem("user_" + name));
+    try {
 
-    if (!user) return alert("Нет такого аккаунта");
-    if (user.password !== password) return alert("Неверный пароль");
+        const res = await fetch('/login', {
 
-    localStorage.setItem("currentUser", name);
+            method: 'POST',
 
-    startSession(user);
+            headers: {
+                'Content-Type': 'application/json'
+            },
+
+            body: JSON.stringify({
+
+                name,
+                password
+            })
+        });
+
+        if (!res.ok) {
+
+            return alert("Неверный логин или пароль");
+        }
+
+        const user = await res.json();
+
+        localStorage.setItem(
+            "currentUser",
+            user.name
+        );
+
+        localStorage.setItem(
+            "user_" + user.name,
+            JSON.stringify(user)
+        );
+
+        startSession(user);
+
+    } catch(err) {
+
+        console.log(err);
+
+        alert("Ошибка сервера");
+    }
 }
 
 // ===== СТАРТ =====
@@ -596,25 +727,58 @@ let level = 1;
 let taskStatus = {};
 let activityData = [0,0,0,0,0,0,0];
 
-// ===== РАНГИ =====
-const rankNames = {
-    1: "[1] Кандидат",
-    2: "[2] Равк",
-    3: "[3] Новичок+",
-    4: "[4] Боец",
-    5: "[5] Ветеран",
-    6: "[6] Элит",
-    7: "[7] Шерх",
-    8: "[8] Гольд",
-    9: "[9] Зам. Главы",
-    10: "[10] Глава",
-    11: "[--] Разработчик"
-};
+function getRankClass(rank){
+
+    if(!rank){
+        return "rank-1";
+    }
+
+    if(rank.includes("[11]")){
+        return "rank-11";
+    }
+
+    if(rank.includes("[10]")){
+        return "rank-10";
+    }
+
+    if(rank.includes("[9]")){
+        return "rank-9";
+    }
+
+    if(rank.includes("[8]")){
+        return "rank-8";
+    }
+
+    if(rank.includes("[7]")){
+        return "rank-7";
+    }
+
+    if(rank.includes("[6]")){
+        return "rank-6";
+    }
+
+    if(rank.includes("[5]")){
+        return "rank-5";
+    }
+
+    if(rank.includes("[4]")){
+        return "rank-4";
+    }
+
+    if(rank.includes("[3]")){
+        return "rank-3";
+    }
+
+    if(rank.includes("[2]")){
+        return "rank-2";
+    }
+
+    return "rank-1";
+}
 
 // ===== ПРОФИЛЬ =====
 function loadProfile(user) {
-    
-    localStorage.removeItem("viewProfile");
+
     el('userName').innerText = user.name;
 
     el('userNameInfo').innerHTML = `
@@ -622,7 +786,7 @@ function loadProfile(user) {
         <span style="color:white;"> ${user.name}</span>
     `;
 
-   // РАНГ
+    // РАНГ
 el('userRank').innerHTML = `
     <span style="color:#777;"></span>
 
@@ -675,29 +839,33 @@ function startSession(user) {
     el('main-content').style.display = 'grid';
 
     // ===== КНОПКА АДМИНКИ =====
-    if (
+if (
 
+    user.rank &&
+    (
         user.rank.includes("[9]") ||
         user.rank.includes("[10]") ||
         user.rank.includes("[11]")
+    )
 
-    ) {
+)
 
-        const adminBox = el('adminButtonBox');
+{
 
-        if (adminBox) {
-            adminBox.style.display = "block";
-        }
+    const adminBox = el('adminButtonBox');
+
+    if (adminBox) {
+        adminBox.style.display = "block";
     }
+}
 
-    // ===== ЗАГРУЗКА ВСЕГО =====
-    setTimeout(() => {
+setTimeout(() => {
 
-        initCharts();
-        renderTasks();
-        renderGallery();
+    initCharts();
+    renderTasks();
+    renderGallery();
 
-    }, 100);
+}, 100);
 }
 
 // ===== ОТКРЫТЬ АДМИНКУ =====
@@ -705,19 +873,48 @@ function openAdminPanel() {
     window.location.href = "admin.html";
 }
 // ===== СОХРАНЕНИЕ =====
-function saveUser() {
+async function saveUser() {
+
     const current = localStorage.getItem("currentUser");
+
     if (!current) return;
 
-    let user = JSON.parse(localStorage.getItem("user_" + current));
+    let user = JSON.parse(
+        localStorage.getItem("user_" + current)
+    );
+
     if (!user) return;
 
+    // ОБНОВЛЯЕМ ДАННЫЕ
     user.xp = xp;
     user.level = level;
     user.taskStatus = taskStatus;
     user.activityData = activityData;
 
-    localStorage.setItem("user_" + current, JSON.stringify(user));
+    // ЛОКАЛЬНО
+    localStorage.setItem(
+        "user_" + current,
+        JSON.stringify(user)
+    );
+
+    try {
+
+        // ОТПРАВКА НА СЕРВЕР
+        await fetch('/save-profile', {
+
+            method: 'POST',
+
+            headers: {
+                'Content-Type': 'application/json'
+            },
+
+            body: JSON.stringify(user)
+        });
+
+    } catch(err) {
+
+        console.log(err);
+    }
 }
 
 // ===== XP =====
@@ -732,51 +929,6 @@ function updateXP() {
     saveUser();
 }
 
-
-function getRankClass(rank){
-
-    if(rank.includes("[11]")){
-        return "rank-11";
-    }
-
-    if(rank.includes("[10]")){
-        return "rank-10";
-    }
-
-    if(rank.includes("[9]")){
-        return "rank-9";
-    }
-
-    if(rank.includes("[8]")){
-        return "rank-8";
-    }
-
-    if(rank.includes("[7]")){
-        return "rank-7";
-    }
-
-    if(rank.includes("[6]")){
-        return "rank-6";
-    }
-
-    if(rank.includes("[5]")){
-        return "rank-5";
-    }
-
-    if(rank.includes("[4]")){
-        return "rank-4";
-    }
-
-    if(rank.includes("[3]")){
-        return "rank-3";
-    }
-
-    if(rank.includes("[2]")){
-        return "rank-2";
-    }
-
-    return "rank-1";
-}
 const tasksByLevel = {
 
     1: [
@@ -878,14 +1030,21 @@ function completeTask(i) {
     currentTaskIndex = i;
         
     const current = localStorage.getItem("currentUser");
-    let user = JSON.parse(localStorage.getItem("user_" + current));
+
+    let user = JSON.parse(
+        localStorage.getItem("user_" + current)
+    );
 
     const task = tasksByLevel[level][i];
 
     document.getElementById("modalName").innerText = user.name;
-    document.getElementById("modalRank").innerText = rankNames[user.rank];
+
+    document.getElementById("modalRank").innerText = user.rank;
+
     document.getElementById("modalPos").innerText = user.position;
+
     document.getElementById("modalDept").innerText = user.department;
+
     document.getElementById("modalTask").innerText = "✅ " + task;
 
     document.getElementById("taskModal").style.display = "flex";
@@ -960,7 +1119,7 @@ async function sendTaskToTelegram() {
 📋 ОТЧЁТ О ЗАДАНИИ
 
 👤 Имя: ${user.name}
-🎖 Ранг: ${rankNames[user.rank]}
+🎖 Ранг: ${user.rank}
 💼 Должность: ${user.position}
 🏢 Отдел: ${user.department}
 
@@ -1068,82 +1227,51 @@ btn.style.opacity = "1";
 
 
 
-// ===== АВАТАР =====
-function changeAvatar(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+app.post(
 
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-        const img = ev.target.result;
-        document.getElementById('avatar').src = img;
+    "/upload-avatar",
 
-        const current = localStorage.getItem("currentUser");
-        let user = JSON.parse(localStorage.getItem("user_" + current));
-        user.avatar = img;
-        localStorage.setItem("user_" + current, JSON.stringify(user));
-    };
-    reader.readAsDataURL(file);
-}
-// ===== ГАЛЕРЕЯ =====
+    upload.single("avatar"),
 
-function uploadImages(event) {
+    async (req, res) => {
 
-    const files = event.target.files;
+        try {
 
-    if (!files.length) return;
+            res.json({
+                avatar: req.file.path
+            });
 
-    const current = localStorage.getItem("currentUser");
+        } catch(err){
 
-    if (!current) {
-        alert("Нет пользователя");
-        return;
+            console.log(err);
+
+            res.sendStatus(500);
+        }
     }
-
-    let user = JSON.parse(localStorage.getItem("user_" + current));
-
-    if (!user.gallery) {
-        user.gallery = [];
-    }
-
-    Array.from(files).forEach(file => {
-
-        // ПРОВЕРКА
-        if (!file.type.startsWith("image/")) return;
-
-        const reader = new FileReader();
-
-        reader.onload = function(e) {
-
-            user.gallery.push(e.target.result);
-
-            localStorage.setItem(
-                "user_" + current,
-                JSON.stringify(user)
-            );
-
-            renderGallery();
-        };
-
-        reader.readAsDataURL(file);
-    });
-}
-
+);
 function renderGallery() {
 
-    const gallery = document.getElementById("gallery");
+    const gallery =
+        document.getElementById("gallery");
 
     if (!gallery) return;
 
-    const current = localStorage.getItem("currentUser");
+    const current =
+        localStorage.getItem("currentUser");
 
     if (!current) return;
 
-    let user = JSON.parse(localStorage.getItem("user_" + current));
+    let user = JSON.parse(
+        localStorage.getItem(
+            "user_" + current
+        )
+    );
 
     gallery.innerHTML = "";
 
-    if (!user.gallery || user.gallery.length === 0) {
+    if (!user.gallery ||
+        user.gallery.length === 0) {
+
         gallery.innerHTML = `
             <div style="
                 color:#666;
@@ -1155,25 +1283,50 @@ function renderGallery() {
                 Галерея пустая
             </div>
         `;
+
         return;
     }
 
     user.gallery.forEach((img, index) => {
 
-        const item = document.createElement("div");
+        const item =
+            document.createElement("div");
 
         item.className = "gallery-item";
 
         item.innerHTML = `
-            <img src="${img}" style="
-                width:100%;
-                height:120px;
-                object-fit:cover;
-                display:block;
-            ">
 
-            <button class="delete-btn"
-                onclick="deleteImage(${index})">
+            <img
+                src="${img}"
+
+                onclick="openViewer('${img}')"
+
+                style="
+                    width:100%;
+                    height:120px;
+                    object-fit:cover;
+                    cursor:pointer;
+                    display:block;
+                "
+            >
+
+            <button
+                onclick="deleteImage(${index})"
+
+                style="
+                    position:absolute;
+                    top:5px;
+                    right:5px;
+                    width:24px;
+                    height:24px;
+                    border:none;
+                    border-radius:50%;
+                    background:#ff0000;
+                    color:white;
+                    cursor:pointer;
+                    font-weight:bold;
+                "
+            >
                 ✕
             </button>
         `;
@@ -1182,20 +1335,72 @@ function renderGallery() {
     });
 }
 
-function deleteImage(index) {
+async function deleteImage(index) {
 
-    const current = localStorage.getItem("currentUser");
+    const current =
+        localStorage.getItem("currentUser");
 
-    let user = JSON.parse(localStorage.getItem("user_" + current));
+    if (!current) return;
 
-    user.gallery.splice(index, 1);
+    try {
 
-    localStorage.setItem(
-        "user_" + current,
-        JSON.stringify(user)
-    );
+        // ПОЛУЧАЕМ ЮЗЕРА С СЕРВЕРА
+        const res = await fetch(
+            "/admin/get-members"
+        );
 
-    renderGallery();
+        const users = await res.json();
+
+        let user = users.find(
+            u => u.name === current
+        );
+
+        if (!user) {
+            return alert("Юзер не найден");
+        }
+
+        // УДАЛЯЕМ ФОТО
+        user.gallery.splice(index, 1);
+
+        // СОХРАНЯЕМ В MONGODB
+        await fetch(
+            "/admin/update-member",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                    "application/json"
+                },
+
+                body: JSON.stringify({
+
+                    password: "05060403",
+
+                    name: user.name,
+
+                    rank: user.rank,
+
+                    warns: user.warns,
+
+                    online: user.online,
+
+                    avatar: user.avatar,
+
+                    gallery: user.gallery
+                })
+            }
+        );
+
+        // ОБНОВИТЬ ЭКРАН
+        renderGallery();
+
+    } catch(err) {
+
+        console.log(err);
+
+        alert("Ошибка удаления");
+    }
 }
 // ===== ГРАФИК =====
 let activityChart;
@@ -1222,58 +1427,110 @@ function initCharts() {
 function logout() {
     localStorage.removeItem("currentUser");
     location.reload();
+    
 }
+function goHome() {
 
+    window.location.href = "index.html";
+
+}
 // ===== АВТОЛОГИН =====
 window.onload = async () => {
 
+    const profileToView =
+        localStorage.getItem("viewProfile");
+
+    // ЕСЛИ ОТКРЫТ ЧУЖОЙ ПРОФИЛЬ
+    if(profileToView){
+
+        isViewingProfile = true;
+    }
+
     const current =
-        localStorage.getItem("viewProfile")
-        || localStorage.getItem("currentUser");
+        profileToView ||
+        localStorage.getItem("currentUser");
 
     if (!current) return;
 
-    let user = JSON.parse(
-        localStorage.getItem("user_" + current)
-    );
-
-    if (!user) return;
-
     try {
 
-        // БЕРЁМ ДАННЫЕ ИЗ АДМИНКИ
-        const res = await fetch('/admin/get-members');
-
-        const members = await res.json();
-
-        const member = members.find(
-            m => m.name === current
+        const res = await fetch(
+            "/admin/get-members"
         );
 
-        // ЕСЛИ НАШЛИ
-        if(member){
+        const users = await res.json();
 
-    user.rank = member.rank;
-    user.warns = member.warns;
-    user.online = member.online;
+        const user = users.find(
+            u => u.name === current
+        );
 
-    // АВАТАР С СЕРВЕРА
-    user.avatar = member.avatar || user.avatar;
+        if (!user) return;
 
-    localStorage.setItem(
-        "user_" + current,
-        JSON.stringify(user)
-    );
-}
+        user.rank =
+    user.rank || "[1] Кандидат";
 
-    } catch(err){
+        user.department =
+            user.department || "Без отдела";
+
+        user.position =
+            user.position || "Участник";
+
+        user.gallery =
+            user.gallery || [];
+
+        localStorage.setItem(
+            "user_" + current,
+            JSON.stringify(user)
+        );
+
+        startSession(user);
+
+        // ===== БЛОКИРОВКА РЕДАКТИРОВАНИЯ =====
+        if(isViewingProfile){
+
+            // скрыть загрузку аватарки
+            const avatarInput =
+                document.querySelector(
+                    'input[type="file"]'
+                );
+
+            if(avatarInput){
+                avatarInput.style.display = "none";
+            }
+
+            // скрыть кнопки заданий
+            document.querySelectorAll("button")
+            .forEach(btn => {
+
+                if(
+                    btn.innerText.includes("Сдать") ||
+                    btn.innerText.includes("ОТПРАВИТЬ")
+                ){
+                    btn.style.display = "none";
+                }
+            });
+
+            // скрыть админ кнопку
+            const adminBox =
+                document.getElementById(
+                    "adminButtonBox"
+                );
+
+            if(adminBox){
+                adminBox.style.display = "none";
+            }
+        }
+
+        localStorage.removeItem(
+            "viewProfile"
+        );
+
+    } catch(err) {
 
         console.log(err);
+
+        alert("Ошибка загрузки");
     }
-
-    startSession(user);
-
-    localStorage.removeItem("viewProfile");
 };
 </script>
 </div>
