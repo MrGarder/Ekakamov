@@ -25,16 +25,19 @@ new CloudinaryStorage({
 
     cloudinary,
 
-    params: {
+    params: async (req, file) => {
 
-        folder: "avatars",
+        return {
 
-        allowed_formats: [
-            "jpg",
-            "png",
-            "jpeg",
-            "webp"
-        ]
+            folder: "avatars",
+
+            resource_type: "image",
+
+            format: "png",
+
+            public_id:
+                Date.now() + "-avatar"
+        };
     }
 });
 
