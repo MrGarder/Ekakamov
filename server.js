@@ -463,7 +463,6 @@ app.post("/login", async (req, res) => {
         res.status(500).send("SERVER ERROR");
     }
 });
-
 app.post(
 
     "/upload-gallery",
@@ -481,7 +480,7 @@ app.post(
                     name
                 });
 
-            if(!user){
+            if (!user) {
 
                 return res.sendStatus(404);
             }
@@ -504,9 +503,12 @@ app.post(
 
         } catch(err){
 
+            console.log(err.message);
             console.log(err);
 
-            res.sendStatus(500);
+            res.status(500).json({
+                error: err.message
+            });
         }
     }
 );
@@ -553,6 +555,7 @@ app.post(
 
         } catch(err){
 
+            console.log(err.message);
             console.log(err);
 
             res.status(500).json({
