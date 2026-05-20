@@ -1610,6 +1610,62 @@ window.onload = async () => {
         alert("Ошибка загрузки");
     }
 };
+
+async function uploadImages(event) {
+
+    const files = event.target.files;
+
+    if (!files.length) return;
+
+    const current =
+        localStorage.getItem("currentUser");
+
+    let user = JSON.parse(
+        localStorage.getItem(
+            "user_" + current
+        )
+    );
+
+    const formData = new FormData();
+
+    formData.append("name", user.name);
+
+    Array.from(files).forEach(file => {
+
+        formData.append(
+            "images",
+            file
+        );
+    });
+
+    try {
+
+        const res = await fetch(
+            "/upload-gallery",
+            {
+                method: "POST",
+                body: formData
+            }
+        );
+
+        const data = await res.json();
+
+        user.gallery = data.gallery;
+
+        localStorage.setItem(
+            "user_" + current,
+            JSON.stringify(user)
+        );
+
+        renderGallery();
+
+    } catch(err){
+
+        console.log(err);
+
+        alert("Ошибка загрузки фото");
+    }
+}
 </script>
 </div>
 </div>
