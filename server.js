@@ -13,7 +13,7 @@ require("multer-storage-cloudinary");
 
 cloudinary.config({
 
-    cloud_name: "mediaflows_8e24758a-471a-4aae-8cbd-00e7190033e7",
+    cloud_name: "dk7o3keez",
 
     api_key: "327451465429494",
 
