@@ -474,6 +474,7 @@ app.post("/login", async (req, res) => {
 
 
 // ===== UPLOAD AVATAR =====
+
 app.post(
 
     "/upload-avatar",
@@ -481,11 +482,13 @@ app.post(
     upload.single("avatar"),
 
     async (req, res) => {
+try {
 
-        try {
+    console.log(req.file);
 
-            console.log("FILE:", req.file);
-            console.log("BODY:", req.body);
+    console.log(
+        JSON.stringify(req.file, null, 2)
+    );
 
             // ФАЙЛ НЕ ЗАГРУЗИЛСЯ
             if (!req.file) {
@@ -507,7 +510,7 @@ app.post(
 
             // ИЩЕМ ЮЗЕРА
             const user = await Member.findOne({
-                name: name
+                name
             });
 
             if (!user) {
@@ -517,7 +520,7 @@ app.post(
                 });
             }
 
-            // ССЫЛКА CLOUDINARY
+            // CLOUDINARY URL
             const avatar =
                 req.file.path ||
                 req.file.secure_url ||
@@ -535,7 +538,10 @@ app.post(
 
             await user.save();
 
-            console.log("AVATAR SAVED:", avatar);
+            console.log(
+                "AVATAR SAVED:",
+                avatar
+            );
 
             // ОТВЕТ
             res.json({
@@ -543,9 +549,12 @@ app.post(
                 avatar: avatar
             });
 
-        } catch (err) {
+        } catch(err){
 
-            console.log("UPLOAD ERROR:");
+            console.log(
+                "UPLOAD ERROR:"
+            );
+
             console.log(err);
 
             res.status(500).json({
@@ -555,6 +564,9 @@ app.post(
         }
     }
 );
+
+// ===== UPLOAD GALLERY =====
+
 app.post(
 
     "/upload-gallery",
@@ -567,20 +579,25 @@ app.post(
 
             const { name } = req.body;
 
-            let user =
+            const user =
                 await Member.findOne({
                     name
                 });
 
             if (!user) {
 
-                return res.sendStatus(404);
+                return res.status(404).json({
+                    error: "Юзер не найден"
+                });
             }
 
-           const urls =
-    req.files.map(
-        file => file.path || file.secure_url
-    );
+            const urls =
+                req.files.map(
+                    file =>
+                        file.path ||
+                        file.secure_url ||
+                        file.url
+                );
 
             user.gallery = [
                 ...(user.gallery || []),
@@ -590,12 +607,12 @@ app.post(
             await user.save();
 
             res.json({
+                success: true,
                 gallery: user.gallery
             });
 
         } catch(err){
 
-            console.log(err.message);
             console.log(err);
 
             res.status(500).json({
@@ -605,35 +622,44 @@ app.post(
     }
 );
 
-app.post("/save-profile", async (req, res) => {
+// ===== SAVE PROFILE =====
 
-    try {
+app.post(
 
-        const {
-            name,
-            xp,
-            level
-        } = req.body;
+    "/save-profile",
 
-        const user =
-            await Member.findOne({ name });
+    async (req, res) => {
 
-        if (!user) {
+        try {
 
-            return res.sendStatus(404);
+            const {
+                name,
+                xp,
+                level
+            } = req.body;
+
+            const user =
+                await Member.findOne({
+                    name
+                });
+
+            if (!user) {
+
+                return res.sendStatus(404);
+            }
+
+            user.xp = xp;
+            user.level = level;
+
+            await user.save();
+
+            res.sendStatus(200);
+
+        } catch(err){
+
+            console.log(err);
+
+            res.sendStatus(500);
         }
-
-        user.xp = xp;
-        user.level = level;
-
-        await user.save();
-
-        res.sendStatus(200);
-
-    } catch(err){
-
-        console.log(err);
-
-        res.sendStatus(500);
     }
-});
+);
