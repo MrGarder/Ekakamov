@@ -605,3 +605,35 @@ app.post(
     }
 );
 
+app.post("/save-profile", async (req, res) => {
+
+    try {
+
+        const {
+            name,
+            xp,
+            level
+        } = req.body;
+
+        const user =
+            await Member.findOne({ name });
+
+        if (!user) {
+
+            return res.sendStatus(404);
+        }
+
+        user.xp = xp;
+        user.level = level;
+
+        await user.save();
+
+        res.sendStatus(200);
+
+    } catch(err){
+
+        console.log(err);
+
+        res.sendStatus(500);
+    }
+});
