@@ -13,9 +13,9 @@ require("multer-storage-cloudinary");
 
 cloudinary.config({
 
-    cloud_name: "dk7o3keez",
+    cloud_name: "Ekakamov",
 
-    api_key: "669527537632519",
+    api_key: "427374582142386",
 
     api_secret: "HPuD0MeI320ThXRwc-RUJhbXKlw"
 });
