@@ -78,7 +78,7 @@ app.use(express.static(__dirname));
 mongoose.set('strictQuery', false);
 
 mongoose.connect(
-    "mongodb+srv://dmin:05060403@cluster0.rnxra9s.mongodb.net/ekakamov?retryWrites=true&w=majority&appName=Cluster0",
+    "mongodb+srv://dragon777:RedDragon505606@cluster0.xxxx.mongodb.net/твоя_база_данных?retryWrites=true&w=majority",
     {
         useNewUrlParser: true,
         useUnifiedTopology: true
