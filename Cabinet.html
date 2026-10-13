@@ -312,7 +312,13 @@ body {
       <div class="glass-card" style="margin-top:10px;">
     <h3>ГАЛЕРЕЯ / ПАМЯТЬ</h3>
 
-    <input type="file" accept="image/*" multiple onchange="uploadImages(event)">
+    <input
+    id="galleryUpload"
+    type="file"
+    accept="image/*"
+    multiple
+    onchange="uploadImages(event)"
+>
 
     <div id="gallery" style="
         display:grid;
@@ -1539,94 +1545,76 @@ window.onload = async () => {
     if(profileToView){
 
         isViewingProfile = true;
-    }
+    } } 
 
     const current =
         profileToView ||
         localStorage.getItem("currentUser");
 
-    if (!current) return;
+    if (!current) return; 
 
-    try {
+    
+    
+// ===== БЛОКИРОВКА ЧУЖОГО ПРОФИЛЯ =====
+if (isViewingProfile) {
 
-        const res = await fetch(
-            "/admin/get-members"
-        );
+    // Скрываем загрузку аватара
+    const avatarInput = document.querySelector(
+        '.avatar-box'
+    )?.parentElement?.querySelector(
+        'input[type="file"]'
+    );
 
-        const users = await res.json();
+    if (avatarInput) {
+        avatarInput.style.display = "none";
+        avatarInput.disabled = true;
+    };
 
-        const user = users.find(
-            u => u.name === current
-        );
+    // Скрываем загрузку фотографий галереи
+    const galleryUpload = document.getElementById(
+        "galleryUpload"
+    );
 
-        if (!user) return;
+    if (galleryUpload) {
+        galleryUpload.style.display = "none";
+        galleryUpload.disabled = true;
+    };
 
-        user.rank =
-    user.rank || "[1] Кандидат";
+    // Скрываем кнопки сдачи заданий и отправки отчётов
+    document.querySelectorAll("button").forEach(btn => {
+        const text = btn.innerText.trim().toUpperCase();
 
-        user.department =
-            user.department || "Без отдела";
-
-        user.position =
-            user.position || "Участник";
-
-        user.gallery =
-            user.gallery || [];
-
-        localStorage.setItem(
-            "user_" + current,
-            JSON.stringify(user)
-        );
-
-        startSession(user);
-
-        // ===== БЛОКИРОВКА РЕДАКТИРОВАНИЯ =====
-        if(isViewingProfile){
-
-            // скрыть загрузку аватарки
-            const avatarInput =
-                document.querySelector(
-                    'input[type="file"]'
-                );
-
-            if(avatarInput){
-                avatarInput.style.display = "none";
-            }
-
-            // скрыть кнопки заданий
-            document.querySelectorAll("button")
-            .forEach(btn => {
-
-                if(
-                    btn.innerText.includes("Сдать") ||
-                    btn.innerText.includes("ОТПРАВИТЬ")
-                ){
-                    btn.style.display = "none";
-                }
-            });
-
-            // скрыть админ кнопку
-            const adminBox =
-                document.getElementById(
-                    "adminButtonBox"
-                );
-
-            if(adminBox){
-                adminBox.style.display = "none";
-            }
+        if (
+            text.includes("СДАТЬ") ||
+            text.includes("ОТПРАВИТЬ")
+        ) {
+            btn.style.display = "none";
+            btn.disabled = true;
         }
+    });
 
-        localStorage.removeItem(
-            "viewProfile"
-        );
+    // Скрываем кнопки удаления фотографий
+    document.querySelectorAll("#gallery button").forEach(btn => {
+        btn.style.display = "none";
+        btn.disabled = true;
+    });
 
-    } catch(err) {
+    // Скрываем админ-панель
+    const adminBox = document.getElementById("adminButtonBox");
 
-        console.log(err);
+    if (adminBox) {
+        adminBox.style.display = "none";
+    };
 
-        alert("Ошибка загрузки");
-    }
-};
+    // Скрываем кнопку выхода из чужого профиля
+    document.querySelectorAll("button").forEach(btn => {
+        if (btn.innerText.includes("ВЫЙТИ ИЗ КАБИНЕТА")) {
+            btn.style.display = "none";
+        }
+    });
+}
+
+
 
 async function uploadImages(event) {
 
