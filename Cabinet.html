@@ -198,6 +198,55 @@ body {
     box-shadow:0 0 20px rgba(255,255,255,0.8);
 }
 
+.main-menu-btn {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    width: 100%;
+    padding: 18px 22px;
+    margin: 20px 0;
+    background: linear-gradient(135deg, #241010, #080808);
+    border: 1px solid #e53935;
+    border-radius: 14px;
+    color: #fff;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(229, 57, 53, 0.15);
+}
+
+.main-menu-btn:hover {
+    background: linear-gradient(135deg, #b71c1c, #241010);
+    box-shadow: 0 6px 25px rgba(229, 57, 53, 0.35);
+    transform: translateY(-2px);
+}
+
+.home-icon {
+    font-size: 32px;
+    color: #ff5252;
+}
+
+.menu-text {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+}
+
+.menu-text strong {
+    font-size: 15px;
+    letter-spacing: 1.5px;
+}
+
+.menu-text small {
+    font-size: 12px;
+    color: #bdbdbd;
+}
+
+.menu-arrow {
+    font-size: 22px;
+    color: #ff5252;
+}
 </style>
 </head>
 <body>
@@ -287,8 +336,13 @@ body {
 
         <canvas id="miniRadar" style="margin: 20px 0;"></canvas>
         <button onclick="logout()" style="width:100%; padding:10px; background:#400; border:1px solid var(--accent); color:#ff5555; cursor:pointer;">ВЫЙТИ ИЗ КАБИНЕТА</button>
-    <button onclick="goHome()" class="logout-btn">
-    Главное меню
+    <button onclick="goHome()" class="main-menu-btn">
+    <span class="home-icon">⌂</span>
+    <span class="menu-text">
+        <strong>ГЛАВНОЕ МЕНЮ</strong>
+        <small>Вернуться на главную страницу</small>
+    </span>
+    <span class="menu-arrow">➜</span>
 </button>
     </div>
     
